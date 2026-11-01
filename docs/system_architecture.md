@@ -173,7 +173,7 @@ that every input timestamp ≤ the label anchor time t, and every label timestam
 
 | Block | Design | Approx. size |
 |---|---|---|
-| Encoder | 5 stride-2 conv blocks (32-64-96-128-192 ch, BN, ReLU) → global avg pool → 256-d | ~0.8 M params |
+| Encoder | 5 stride-2 conv blocks (32-64-96-128-192 ch, BN, ReLU) → global avg pool → 256-d | 1.07 M params (measured) |
 | Measurement fusion | speed (normalised) + one-hot command → MLP(64), concatenated with image feature | small |
 | A: trajectory head | MLP 320→256→20 (10×(x, y)); L1 loss on waypoints | ~0.1 M |
 | B: temporal | shared encoder per frame → GRU(256) over H frames → same head | +0.4 M |

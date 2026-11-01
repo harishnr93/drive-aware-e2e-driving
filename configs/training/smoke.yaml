@@ -1,0 +1,12 @@
+# Phase 1 environment validation: synthetic data, not a research experiment.
+seed: 0
+device: auto          # auto | cuda | cpu
+batch_size: 4
+steps: 300
+lr: 1.0e-3
+num_samples: 512
+image_height: 96
+image_width: 160
+num_waypoints: 10
+latency_iters: 200
+deterministic: false

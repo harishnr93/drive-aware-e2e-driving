@@ -1,6 +1,6 @@
 # Development Environment
 
-Status: **Phase 0 — measured 2026-11-01. Nothing has been installed yet.**
+Status: **Phase 0 assessment and Phase 1 install/measurements, 2026-11-01.**
 
 ## 1. Measured host facts
 
@@ -58,7 +58,7 @@ CUDA context costs ~0.3–0.5 GiB more. Plan for **≤ 3 GiB of tensors** per pr
 | Dev deps | pytest, ruff, mypy (interfaces only) | |
 | Optional groups | `[ros]` (no pip deps, uses sourced Humble), `[carla]` (`carla==0.9.15/16`, chosen in Phase 10) | Kept out of the core install |
 
-Estimated install size: about 3 GB for torch + CUDA libraries, plus about 0.3 GB for everything else.
+Phase 0 estimate was ~3.3 GB. **Measured: the `.venv` is 6.7 GB** (CUDA 12.6 runtime libraries, cuDNN, NCCL, Triton).
 
 ## 4. Resource budget (planning numbers, to be replaced by measurements)
 
@@ -81,7 +81,40 @@ Estimated install size: about 3 GB for torch + CUDA libraries, plus about 0.3 GB
 - Fallback: a remote CARLA server (cloud GPU) over the same client interface.
 - Decision deferred to Phase 10. The rest of the project does not depend on CARLA.
 
-## 6. Reproducibility record
+## 6. Phase 1 installation results (measured)
+
+| Item | Result |
+|---|---|
+| Installed | `torch 2.14.1+cu126`, `torchvision 0.29.1+cu126`, CUDA runtime 12.6, cuDNN 9.10.2, numpy 2.2.6, opencv-python-headless 5.0.0 |
+| GPU support | `torch.cuda.get_arch_list()` includes `sm_75`; CUDA matmul on the GTX 1650 Ti succeeds |
+| ROS leakage | Confirmed: with the ROS `PYTHONPATH` (243 entries) set, `pytest` crashes while importing a ROS launch plugin (`No module named 'lark'`). With `scripts/env.sh`, all tests pass |
+| Unit tests | 40 passed (CPU), ruff and mypy clean |
+
+Smoke training (`scripts/smoke_train.py`, synthetic task, compact encoder + waypoint head,
+1.15 M parameters, FP32, 300 steps). These numbers validate the environment; they are not
+research results.
+
+| Device | Batch | Train samples/s | Peak allocated / reserved VRAM | Device VRAM used (incl. desktop) | Process RSS | Inference batch 1, p50 / p95 |
+|---|---|---|---|---|---|---|
+| CUDA | 4 | 225 | 55 / 66 MiB | 728 MiB | 1.24 GiB | 2.48 / 2.94 ms |
+| CUDA | 16 | 804 | 111 / 140 MiB | 802 MiB | 1.24 GiB | 2.81 / 3.60 ms |
+| CUDA | 64 | 1174 | 344 / 548 MiB | 1210 MiB | 1.27 GiB | 2.53 / 2.98 ms |
+| CPU | 4 | 114 | — | — | 0.83 GiB | 3.85 / 4.39 ms |
+
+Observations:
+- At batch 4 the run is overhead-bound, not memory-bound: the CUDA context plus the
+  Windows desktop (~670 MiB) dominate device memory. For a single-frame model the batch size
+  can be raised well beyond 4. The temporal model multiplies activations by H.
+- Each PyTorch process costs ~1.2 GiB of host RAM with CUDA loaded (0.8 GiB on CPU). This
+  matters for DataLoader workers and parallel simulation on 7.4 GiB.
+- Batch-1 inference (~2.5 ms on GPU, ~3.9 ms on CPU) is far below the 100 ms control period.
+  The CPU is a viable inference target for closed-loop evaluation.
+- With `deterministic=true`, repeated runs give bit-identical results on both CPU and CUDA.
+- The model learned the synthetic signal at every batch size (held-out L1 0.25 / 0.08 / 0.68
+  vs. 1.94 for predicting the mean). The weaker batch-64 result most likely comes from
+  overfitting 512 samples for ~37 epochs; it was not investigated further.
+
+## 7. Reproducibility record
 
 Every training/evaluation run will write `env.json` with: git commit and dirty flag,
 Python/torch/CUDA/cuDNN versions, GPU name, driver, and `pip freeze` hash.

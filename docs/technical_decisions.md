@@ -6,7 +6,7 @@ Format: decision, alternatives considered, rationale. Status values: **accepted*
 | # | Decision | Alternatives | Rationale | Status |
 |---|---|---|---|---|
 | D1 | Python 3.10 venv | conda env; Python 3.12 | Matches ROS 2 Humble and CARLA client ABI; venv is lightweight | accepted |
-| D2 | `torch 2.14.1+cu126` | cu128 (max 2.11); CPU only | Newest CUDA build with cp310; driver supports CUDA 13.1 | provisional: verify sm_75 in arch list |
+| D2 | `torch 2.14.1+cu126` | cu128 (max 2.11); CPU only | Newest CUDA build with cp310; driver supports CUDA 13.1 | accepted: sm_75 verified, Phase 1 |
 | D3 | FP32 default; FP16 AMP later | BF16 | Turing has no BF16 hardware | accepted |
 | D4 | Single package `src/driveaware/` | top-level `models/`, `datasets/`, … | Avoids import shadowing (HF `datasets`); installable and testable | accepted |
 | D5 | Unset `PYTHONPATH`/AMENT vars in `scripts/env.sh` | rely on venv isolation | ROS Humble paths override venv site-packages and auto-load pytest plugins | accepted |

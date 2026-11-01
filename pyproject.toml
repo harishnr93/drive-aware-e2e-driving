@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "driveaware"
+version = "0.1.0"
+description = "Uncertainty-aware end-to-end driving with self-introspection and risk-adaptive planning"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Harish Natarajan Ravi" }]
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "numpy>=1.26,<3",
+    "pyyaml>=6.0",
+    "psutil>=5.9",
+    "nvidia-ml-py>=12.0",
+    "opencv-python-headless>=4.8",
+    "matplotlib>=3.8",
+    "tqdm>=4.66",
+    # torch is installed separately from the CUDA index (see README / docs/environment.md)
+    "torch>=2.4",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6", "mypy>=1.10", "types-PyYAML"]
+carla = []  # client version selected in Phase 10
+ros = []    # uses the separately sourced ROS 2 Humble installation
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = ["gpu: requires a CUDA device (skipped otherwise)"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests", "scripts"]
+extend-exclude = ["*.md"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "NPY", "SIM"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["src/driveaware/core"]
+ignore_missing_imports = true
+warn_unused_ignores = true
+disallow_untyped_defs = true

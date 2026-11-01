@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+# run outputs and data (summaries are committed explicitly)
+experiments/*
+data/
+*.pt
+*.npz
+*.npy
