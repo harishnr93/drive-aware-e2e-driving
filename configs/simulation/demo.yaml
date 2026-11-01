@@ -1,0 +1,11 @@
+# Phase 2 simulator demonstration: traffic-unaware route follower (NOT the expert).
+# Collisions and red-light violations are expected; the point is to exercise event detection.
+map_seed: 0
+route_seeds: [0, 1, 2, 3]
+traffic_seed: 0
+num_vehicles: 12
+num_parked: 6
+route_length: 400.0
+max_duration: 120.0
+video: true
+video_episodes: 2

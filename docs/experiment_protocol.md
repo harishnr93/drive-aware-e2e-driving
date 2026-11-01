@@ -119,4 +119,4 @@ files by a script, never typed by hand.
 
 | Date | Deviation | Reason |
 |---|---|---|
-| — | — | — |
+| 2026-11-01 | Added LANE_DEPARTURE (non-terminal infraction) and TIMEOUT events. Stall timeout is 40 s instead of the 20 s in `research_plan.md` §5 | Lane-departure rate is a required metric. 20 s is shorter than the worst split-phase red wait (~27 s), so a compliant driver would be flagged as stalled |

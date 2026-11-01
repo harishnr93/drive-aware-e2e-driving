@@ -147,27 +147,75 @@ actually have happened. This is the basis of the false-intervention metric.
 `PrivilegedState` (enforced by types and covered by a test). A dataset test also asserts
 that every input timestamp ≤ the label anchor time t, and every label timestamp > t.
 
-## 6. Lightweight simulator design (Phase 2)
+## 6. Lightweight simulator (Phase 2, as built)
 
-- **Map:** procedurally generated road graph from a seed. Lane centrelines are polylines
-  (arc-length parameterised), lane width 3.5 m. Elements: straights, constant-curvature arcs,
-  3-way and 4-way intersections, crosswalks, signal-controlled junctions.
-- **Ego dynamics:** kinematic bicycle at the rear axle. Wheelbase 2.7 m, footprint
-  4.6×1.9 m, max steer 0.6 rad, steer-rate limit, `a = 3.0·throttle − 8.0·brake − c·v²`.
-  Exact arc integration.
-- **Agents:** IDM vehicles on lanes, pedestrians on crosswalks (+ jaywalkers in OOD),
-  static obstacles. All deterministic given the scenario seed.
-- **Events:** oriented-box collisions (SAT), off-road via footprint corners vs. drivable
-  area, red-light crossing of a stop line, route deviation, stall.
-- **Renderer (pseudo-perspective camera):** pinhole camera 1.5 m above the ground,
-  pitched down. The ground-plane point behind each pixel is constant in the ego frame and is
-  precomputed once. Each frame, those points are transformed to world coordinates and
-  looked up in a rasterised semantic texture of the map (road, markings, sidewalk, grass,
-  stop lines). Agents and traffic lights are drawn as projected 3D boxes (painter's
-  algorithm, `cv2.fillPoly`). Target: < 2 ms/frame on the CPU at 160×96. Lighting,
-  texture noise, blur, noise, and occlusion are applied as image-space perturbations
-  (training augmentation and OOD suites).
-- **Top-down debug view** is rendered separately for replay videos. It is never a policy input.
+Code: `src/driveaware/sim/lightweight/`. Tests: `tests/sim/`.
+
+- **Map (`roadmap.py`):** a 4×4 jittered grid of nodes (80 m spacing, ±6 m). 4-neighbour
+  roads are dropped at random, but never so as to create a dead end or disconnect the network.
+  35% of roads are quadratic Bézier curves (control-point offset 6–16 m). Each road has
+  one 3.5 m lane per direction plus a 2 m parking shoulder and a 2.5 m sidewalk. Road lanes
+  stop 16 m from the node centre, and Hermite connector lanes join each incoming lane to
+  every outgoing lane except the U-turn. Junction areas are drawn as discs, which makes them
+  visually plaza-like.
+- **Single source of truth:** the map is rasterised once (0.1 m/px, semantic classes plus a
+  colour raster with static texture noise as a motion cue). The camera renderer and
+  off-road detection both read this raster.
+- **Commands (`route.py`):** LEFT/RIGHT/STRAIGHT for connectors at junctions with ≥ 3 roads,
+  announced 20 m before the junction. Bends at degree-2 nodes are LANE_FOLLOW.
+- **Signals:** every junction with ≥ 3 roads is signalised with **split phasing**: approaches
+  get green one at a time (6 s green, 2 s yellow, 1 s all-red), so greens never conflict.
+  Each junction has a random offset. The cost is long red waits of up to ~27 s at 4-way
+  junctions. Signal state is a pure function of time, so it needs no snapshot state.
+- **Ego dynamics (`vehicle.py`):** kinematic bicycle at the rear axle, as specified, with a
+  1.2 rad/s steering-rate limit. Integration is exact for constant curvature and
+  acceleration within a 0.05 s step.
+- **Traffic (`agents.py`):** IDM vehicles on random lane walks. The leader is the nearest
+  actor in a lane corridor ahead, or a virtual obstacle at a red stop line (or a yellow one
+  when stopping is comfortable). NPCs yield to pedestrians on the carriageway ahead.
+  Pedestrians arrive at mid-block crosswalks (Poisson, mean 12 s), wait at the kerb while a
+  vehicle occupies the crosswalk, and never step into a vehicle. Parked cars sit on the
+  shoulder and intrude 0–0.3 m into the lane.
+- **Events (`env.py`):** COLLISION (SAT test every physics step, terminal), OFF_ROAD
+  (footprint corners and edge midpoints vs. raster, terminal), LANE_DEPARTURE (box centre
+  more than half a lane from the route, rising edge with 0.2 m hysteresis, non-terminal),
+  RED_LIGHT (front bumper crosses a red stop line, non-terminal), ROUTE_DEVIATION (> 5 m,
+  terminal), STALL (< 0.1 m/s for 40 s, terminal), ROUTE_COMPLETE, TIMEOUT.
+  NPC–NPC contacts are not scored.
+- **Camera (`renderer.py`):** 90° HFOV, 8° pitch, 1.5 m high, 1.5 m ahead of the rear axle,
+  2× supersampling, fog from 35–80 m. Agents and signal heads are shaded cuboids with
+  back-face culling, near-plane clipping, and far-to-near painting. Each signal head sits over
+  its approach lane on the far side of the junction, 5.2 m up, so it stays visible while
+  waiting at the stop line. Only the face pointing at the approach is lit.
+- **Determinism:** episode-static content (map, route, NPC paths, parked cars) is rebuilt
+  from `ScenarioSpec` seeds. `get_state()` pickles only `SimState` (about 1 KB) plus the
+  traffic RNG state. A replay log is `(spec, actions)`.
+- **Debug output (`viz/replay.py`, `scripts/sim_demo.py`):** a top-down view and MP4 export.
+  The top-down view is never a policy input.
+
+Measured performance (one CPU core, default traffic: 12 vehicles, 6 parked cars):
+
+| Item | Measured |
+|---|---|
+| Map generation (cached per seed) | 0.4–0.6 s |
+| Reset on a cached map | 12–14 ms |
+| Camera render: ground only / empty scene / 20 agents + 12 signal heads | 0.9 / 1.8 / 4.3 ms |
+| Full control step incl. render (demo run, 1271 steps) | mean 9.7 ms, p95 12.5 ms (~10× real time) |
+| Full control step without render (20 NPCs) | ~12 ms incl. test-side overlap checks |
+| Process RSS | ~0.6 GiB |
+
+The < 2 ms render target is met only for scenes without agents. Cuboid drawing in Python
+dominates busy scenes. Vectorising it is deferred until data collection is shown to be
+render-bound.
+
+Known limitations:
+- Signal heads are about 3×5 px at the stop line at 160×96. Whether a policy can read the
+  signal state at this resolution is an open question for Phase 4 (red-light violations will
+  show it).
+- Split phasing is unrealistic and produces long waits. Unsignalised junctions and permissive
+  left turns are not modelled.
+- Pedestrians appear only at crosswalks. Jaywalking is reserved for the OOD suite (Phase 9).
+- Static obstacles are parked cars only. Blocked lanes that require an overtake are not modelled.
 
 ## 7. Model design (Phases 4–7)
 
@@ -199,7 +247,7 @@ A finite-state machine over `NORMAL → CAUTIOUS → FALLBACK`:
   then frozen for test.
 - Every mode change is logged with its timestamp, p, and a state snapshot ID.
 
-## 9. Controller (shared by expert and policy)
+## 9. Controller (shared by expert and policy; implemented in Phase 2)
 
 - Lateral: pure pursuit on a waypoint path, lookahead `L_d = clip(k·v + L_0, 2, 10) m`.
 - Longitudinal: PID on target speed, mapped to throttle/brake with a dead-band to avoid

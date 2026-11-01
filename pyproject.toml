@@ -44,6 +44,15 @@ extend-exclude = ["*.md"]
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "NPY", "SIM"]
 
+[tool.ruff.lint.flake8-bugbear]
+# Frozen config dataclasses are immutable, so they are safe as argument defaults.
+extend-immutable-calls = [
+    "driveaware.control.controller.ControllerConfig",
+    "driveaware.sim.lightweight.env.SimConfig",
+    "driveaware.sim.lightweight.renderer.CameraConfig",
+    "driveaware.sim.lightweight.roadmap.MapConfig",
+]
+
 [tool.mypy]
 python_version = "3.10"
 files = ["src/driveaware/core"]

@@ -65,7 +65,7 @@ Additional controls (Phase 8/11):
 ## 5. Failure definition (summary — full spec in `experiment_protocol.md`)
 
 A *failure event* at time t_f is any of: collision; off-road (ego footprint leaves the
-drivable area); red-light violation; route deviation > 5 m; stall > 20 s without progress.
+drivable area); red-light violation; route deviation > 5 m; stall > 40 s without progress (changed from 20 s, see the deviation log in `experiment_protocol.md`).
 The introspection label at time t is `y_t = 1` iff a failure occurs in `(t, t + T_h]`,
 with `T_h = 2.0 s` by default (ablation: 1, 2, 3 s). Inputs at time t use only data from
 `≤ t`.

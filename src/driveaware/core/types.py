@@ -37,6 +37,8 @@ class EventType(IntEnum):
     ROUTE_DEVIATION = 3
     STALL = 4
     ROUTE_COMPLETE = 5
+    LANE_DEPARTURE = 6  # infraction; not in FAILURE_EVENTS by default
+    TIMEOUT = 7  # episode time limit reached
 
 
 FAILURE_EVENTS = frozenset(
