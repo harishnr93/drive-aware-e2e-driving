@@ -51,6 +51,10 @@ extend-immutable-calls = [
     "driveaware.sim.lightweight.env.SimConfig",
     "driveaware.sim.lightweight.renderer.CameraConfig",
     "driveaware.sim.lightweight.roadmap.MapConfig",
+    "driveaware.control.ControllerConfig",
+    "driveaware.agents.policy_agent.AgentConfig",
+    "driveaware.core.timing.TimingConfig",
+    "driveaware.models.trajectory.single_frame.SingleFrameConfig",
 ]
 
 [tool.mypy]

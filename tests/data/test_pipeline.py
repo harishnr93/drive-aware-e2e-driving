@@ -23,8 +23,14 @@ from driveaware.data.validation import (
 from driveaware.sim.lightweight.env import LightweightDrivingSim
 from driveaware.sim.lightweight.scenario import ScenarioSpec, TrafficConfig
 
-BASE = ScenarioSpec(0, 0, 0, traffic=TrafficConfig(num_vehicles=2, num_parked=1),
-                    route_length=60.0, max_duration=40.0)
+BASE = ScenarioSpec(
+    0,
+    0,
+    0,
+    traffic=TrafficConfig(num_vehicles=2, num_parked=1),
+    route_length=60.0,
+    max_duration=40.0,
+)
 
 
 @pytest.fixture(scope="module")
@@ -116,12 +122,11 @@ def test_labels_come_from_future_of_same_episode(dataset_root):
     f = ds.frames
     g = ds.indices
     assert (f["episode_index"][g + 20] == f["episode_index"][g]).all()
-    assert (f["timestamp"][g + 20] - f["timestamp"][g] == pytest.approx(2.0))
+    assert f["timestamp"][g + 20] - f["timestamp"][g] == pytest.approx(2.0)
 
 
 def test_dataloader_batches(dataset_root):
     ds = DrivingDataset(dataset_root / "train", history=2)
-    batch = next(iter(torch.utils.data.DataLoader(ds, batch_size=4, num_workers=2,
-                                                  shuffle=True)))
+    batch = next(iter(torch.utils.data.DataLoader(ds, batch_size=4, num_workers=2, shuffle=True)))
     assert batch["image"].shape == (4, 2, 96, 160, 3)
     assert batch["command"].dtype == torch.long

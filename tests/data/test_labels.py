@@ -41,7 +41,7 @@ def test_label_validity_excludes_noise_and_end():
         expected[t] = not perturbed[t : t + 20].any()
     np.testing.assert_array_equal(valid, expected)
     assert valid[10] and not valid[11] and not valid[32] and valid[33]
-    assert not valid[n - 20:].any()
+    assert not valid[n - 20 :].any()
 
 
 def test_all_waypoints_nan_where_invalid():

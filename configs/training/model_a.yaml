@@ -1,0 +1,11 @@
+# Model A: single-frame CNN behaviour cloning (Phase 4).
+name: model_a
+model: single_frame
+data_root: data/expert_v1
+seed: 0
+epochs: 12
+batch_size: 64
+lr: 3.0e-4
+weight_decay: 1.0e-4
+workers: 4
+stationary_weight: 0.3

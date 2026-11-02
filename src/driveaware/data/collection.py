@@ -191,8 +191,9 @@ def plan_requests(
             traffic_seed = derive_seed(dataset_seed, split, map_seed, k, "traffic") % 2**31
             noise_seed = derive_seed(dataset_seed, split, map_seed, k, "noise") % 2**31
             noisy = make_rng(noise_seed).random() < noise_cfg.episode_prob
-            spec = replace(base_spec, map_seed=map_seed, route_seed=route_seed,
-                           traffic_seed=traffic_seed)
+            spec = replace(
+                base_spec, map_seed=map_seed, route_seed=route_seed, traffic_seed=traffic_seed
+            )
             out.append(EpisodeRequest(split, eid, spec, noisy, noise_seed))
             eid += 1
     return out

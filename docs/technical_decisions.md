@@ -37,6 +37,10 @@ Format: decision, alternatives considered, rationale. Status values: **accepted*
 | D30 | DART-style steering bursts in 50% of episodes; labels require a noise-free 2 s window | DAgger; no noise | Gives recovery samples (8.5% of train) without labelling the noise itself. DAgger is still possible later | accepted |
 | D31 | Keep every frame in per-split memmaps and select samples via `label_valid` | store only labelled frames | Temporal models need predecessors of the first labelled frame | accepted |
 | D32 | On collision, physics stops but the clock completes the control period | end the step at contact time | Keeps every observation on the 10 Hz grid. The event keeps its exact time | accepted |
+| D33 | Weight frames that stay stationary for the whole 2 s window by 0.3 (22.5% of train samples); stopped-but-about-to-move frames keep weight 1 | no reweighting; dropping stationary frames | Long red-light waits are many near-identical frames. Starting from rest is the informative part and is kept at full weight | accepted (Phase 4) |
+| D34 | Target speed from predicted waypoints: \|w₂ − w₀\| / 0.4 s; same pure-pursuit + PID controller as the expert | separate speed head; PID on the first waypoint | Planned in D11. An oracle with privileged waypoints completes 30/30 val routes through this exact rule, so the pipeline is sound | accepted |
+| D35 | Closed-loop test scenarios: test_id maps (3000–3009) with routes/traffic derived independently of the dataset (`scenario_set`), identical for all agents | new maps | Keeps the map-level split; routes are new; paired comparison across agents | accepted |
+| D36 | Image normalisation statistics are computed from 2,000 train frames and stored as model buffers | fixed constants | Travels with the checkpoint; no train/test leakage | accepted |
 
 ## Rejected or deferred ideas
 

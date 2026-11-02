@@ -1,0 +1,414 @@
+{
+ "source_run": "20261102-113159_closed_loop_test_id",
+ "set": "test_id",
+ "num_scenarios": 50,
+ "open_loop_reference": {
+  "stand_still": {
+   "ade": 4.3992791175842285,
+   "fde": 8.025793075561523
+  },
+  "constant_velocity_straight": {
+   "ade": 0.7683319169600481,
+   "fde": 1.962909264713418
+  }
+ },
+ "agents": {
+  "expert": {
+   "closed_loop": {
+    "episodes": 50,
+    "outcomes": {
+     "ROUTE_COMPLETE": 50
+    },
+    "route_completion": 1.0,
+    "route_completion_ci95": [
+     1.0,
+     1.0
+    ],
+    "success_rate": 1.0,
+    "collision_episode_rate": 0.0,
+    "collision_episode_rate_ci95": [
+     0.0,
+     0.0
+    ],
+    "driving_score": 1.0,
+    "distance_km": 15.923008583251951,
+    "per_km": {
+     "collision": 0.0,
+     "red_light": 0.0,
+     "off_road": 0.0,
+     "lane_departure": 0.0,
+     "route_deviation": 0.0,
+     "stall": 0.0
+    },
+    "collisions_by_kind": {
+     "vehicle": 0,
+     "pedestrian": 0,
+     "static": 0
+    },
+    "mean_speed": 4.209072547713437,
+    "failure_location": {},
+    "wall_seconds": 86.99778590299957
+   },
+   "checkpoint": null
+  },
+  "20261102-105211_model_a_seed0": {
+   "closed_loop": {
+    "episodes": 50,
+    "outcomes": {
+     "COLLISION": 9,
+     "ROUTE_DEVIATION": 20,
+     "OFF_ROAD": 16,
+     "ROUTE_COMPLETE": 5
+    },
+    "route_completion": 0.4222458439687493,
+    "route_completion_ci95": [
+     0.35111762530186136,
+     0.4976393888152988
+    ],
+    "success_rate": 0.1,
+    "collision_episode_rate": 0.18,
+    "collision_episode_rate_ci95": [
+     0.08,
+     0.3
+    ],
+    "driving_score": 0.3166089337735235,
+    "distance_km": 6.678672486118822,
+    "per_km": {
+     "collision": 1.3475731919338616,
+     "red_light": 4.192449930460903,
+     "off_road": 2.395685674549087,
+     "lane_departure": 8.235169506262487,
+     "route_deviation": 3.144337447845677,
+     "stall": 0.0
+    },
+    "collisions_by_kind": {
+     "vehicle": 7,
+     "pedestrian": 2,
+     "static": 0
+    },
+    "mean_speed": 4.230314758773958,
+    "failure_location": {
+     "road/LANE_FOLLOW": 12,
+     "junction/LEFT": 12,
+     "junction/LANE_FOLLOW": 1,
+     "junction/RIGHT": 7,
+     "junction/STRAIGHT": 13
+    },
+    "latency_ms_p50": 9.321148249910038,
+    "latency_ms_p95": 13.991027849965576,
+    "wall_seconds": 104.60941615499996
+   },
+   "open_loop": {
+    "ade": 0.15915001928806305,
+    "fde": 0.40281280875205994,
+    "l1": 0.08962532132863998,
+    "n": 17137,
+    "ade_lane_follow": 0.19177499413490295,
+    "fde_lane_follow": 0.4792414605617523,
+    "ade_left": 0.16513369977474213,
+    "fde_left": 0.4198881983757019,
+    "ade_right": 0.10750625282526016,
+    "fde_right": 0.27199462056159973,
+    "ade_straight": 0.11378937214612961,
+    "fde_straight": 0.30453115701675415,
+    "ade_moving": 0.1998775750398636,
+    "ade_stationary": 0.02617226354777813
+   },
+   "vs_expert": {
+    "completion": {
+     "mean": -0.5777541560312507,
+     "ci95": [
+      -0.6488823746981386,
+      -0.5023606111847012
+     ]
+    },
+    "driving_score": {
+     "mean": -0.6833910662264766,
+     "ci95": [
+      -0.7384361760782872,
+      -0.6221198916866276
+     ]
+    },
+    "collision": {
+     "mean": 0.18,
+     "ci95": [
+      0.08,
+      0.3
+     ]
+    }
+   },
+   "checkpoint": "/home/ubuntu_22/harish_ws/drive-aware-e2e-driving/experiments/20261102-105211_model_a_seed0/best.pt"
+  },
+  "20261102-110508_model_a_seed1": {
+   "closed_loop": {
+    "episodes": 50,
+    "outcomes": {
+     "OFF_ROAD": 16,
+     "ROUTE_DEVIATION": 21,
+     "COLLISION": 10,
+     "ROUTE_COMPLETE": 3
+    },
+    "route_completion": 0.4014930399769468,
+    "route_completion_ci95": [
+     0.33844057634308766,
+     0.46841747332379674
+    ],
+    "success_rate": 0.06,
+    "collision_episode_rate": 0.2,
+    "collision_episode_rate_ci95": [
+     0.1,
+     0.32
+    ],
+    "driving_score": 0.3133053879305836,
+    "distance_km": 6.3032098574399065,
+    "per_km": {
+     "collision": 1.5864932671084462,
+     "red_light": 3.966233167771115,
+     "off_road": 2.538389227373514,
+     "lane_departure": 9.67760892936152,
+     "route_deviation": 3.331635860927737,
+     "stall": 0.0
+    },
+    "collisions_by_kind": {
+     "vehicle": 8,
+     "pedestrian": 2,
+     "static": 0
+    },
+    "mean_speed": 4.321173277922842,
+    "failure_location": {
+     "junction/LANE_FOLLOW": 4,
+     "junction/LEFT": 14,
+     "road/LANE_FOLLOW": 9,
+     "junction/RIGHT": 6,
+     "junction/STRAIGHT": 14
+    },
+    "latency_ms_p50": 8.593179999934364,
+    "latency_ms_p95": 12.64462137485225,
+    "wall_seconds": 87.9849759509998
+   },
+   "open_loop": {
+    "ade": 0.16363897919654846,
+    "fde": 0.4135356545448303,
+    "l1": 0.09238104522228241,
+    "n": 17137,
+    "ade_lane_follow": 0.19376757740974426,
+    "fde_lane_follow": 0.48244455456733704,
+    "ade_left": 0.16240890324115753,
+    "fde_left": 0.4107018709182739,
+    "ade_right": 0.11039182543754578,
+    "fde_right": 0.27684110403060913,
+    "ade_straight": 0.13612496852874756,
+    "fde_straight": 0.3681231439113617,
+    "ade_moving": 0.19864460825920105,
+    "ade_stationary": 0.04934358596801758
+   },
+   "vs_expert": {
+    "completion": {
+     "mean": -0.5985069600230533,
+     "ci95": [
+      -0.6615594236569124,
+      -0.5315825266762033
+     ]
+    },
+    "driving_score": {
+     "mean": -0.6866946120694165,
+     "ci95": [
+      -0.7412299523956993,
+      -0.6270704430961618
+     ]
+    },
+    "collision": {
+     "mean": 0.2,
+     "ci95": [
+      0.1,
+      0.32
+     ]
+    }
+   },
+   "checkpoint": "/home/ubuntu_22/harish_ws/drive-aware-e2e-driving/experiments/20261102-110508_model_a_seed1/best.pt"
+  },
+  "20261102-111841_model_a_seed2": {
+   "closed_loop": {
+    "episodes": 50,
+    "outcomes": {
+     "OFF_ROAD": 15,
+     "ROUTE_DEVIATION": 22,
+     "COLLISION": 8,
+     "ROUTE_COMPLETE": 5
+    },
+    "route_completion": 0.4158810127667589,
+    "route_completion_ci95": [
+     0.34159736464905743,
+     0.49602033897838543
+    ],
+    "success_rate": 0.1,
+    "collision_episode_rate": 0.16,
+    "collision_episode_rate_ci95": [
+     0.06,
+     0.26
+    ],
+    "driving_score": 0.3395957207239487,
+    "distance_km": 6.534814869660592,
+    "per_km": {
+     "collision": 1.2242121865061355,
+     "red_light": 3.97868960614494,
+     "off_road": 2.295397849699004,
+     "lane_departure": 8.41645878222968,
+     "route_deviation": 3.3665835128918724,
+     "stall": 0.0
+    },
+    "collisions_by_kind": {
+     "vehicle": 7,
+     "pedestrian": 1,
+     "static": 0
+    },
+    "mean_speed": 4.26340962738539,
+    "failure_location": {
+     "road/LANE_FOLLOW": 12,
+     "junction/LEFT": 14,
+     "junction/RIGHT": 8,
+     "junction/STRAIGHT": 10,
+     "junction/LANE_FOLLOW": 1
+    },
+    "latency_ms_p50": 8.759008999732032,
+    "latency_ms_p95": 12.78510822530734,
+    "wall_seconds": 94.96218221199979
+   },
+   "open_loop": {
+    "ade": 0.16288195550441742,
+    "fde": 0.41063404083251953,
+    "l1": 0.09174013882875443,
+    "n": 17137,
+    "ade_lane_follow": 0.19014625251293182,
+    "fde_lane_follow": 0.47494760155677795,
+    "ade_left": 0.17800317704677582,
+    "fde_left": 0.44542640447616577,
+    "ade_right": 0.11059235781431198,
+    "fde_right": 0.2801983952522278,
+    "ade_straight": 0.12391556799411774,
+    "fde_straight": 0.32805532217025757,
+    "ade_moving": 0.1990608423948288,
+    "ade_stationary": 0.04475579038262367
+   },
+   "vs_expert": {
+    "completion": {
+     "mean": -0.5841189872332412,
+     "ci95": [
+      -0.6584026353509425,
+      -0.5039796610216145
+     ]
+    },
+    "driving_score": {
+     "mean": -0.6604042792760513,
+     "ci95": [
+      -0.7299647021667757,
+      -0.5846852788531394
+     ]
+    },
+    "collision": {
+     "mean": 0.16,
+     "ci95": [
+      0.06,
+      0.26
+     ]
+    }
+   },
+   "checkpoint": "/home/ubuntu_22/harish_ws/drive-aware-e2e-driving/experiments/20261102-111841_model_a_seed2/best.pt"
+  }
+ },
+ "training": {
+  "20261102-105211_model_a_seed0": {
+   "best_val": {
+    "ade": 0.15679845213890076,
+    "fde": 0.3935792148113251,
+    "l1": 0.08910572528839111,
+    "n": 11029,
+    "ade_lane_follow": 0.18607036769390106,
+    "fde_lane_follow": 0.4565603733062744,
+    "ade_left": 0.11151990294456482,
+    "fde_left": 0.27387720346450806,
+    "ade_right": 0.12388740479946136,
+    "fde_right": 0.3199979066848755,
+    "ade_straight": 0.13154403865337372,
+    "fde_straight": 0.3534789979457855,
+    "ade_moving": 0.1926693618297577,
+    "ade_stationary": 0.034231096506118774,
+    "epoch": 11
+   },
+   "train_seconds": 760.995286822,
+   "peak_vram_alloc_mib": 743.85498046875,
+   "peak_vram_reserved_mib": 1350.0,
+   "process_rss_mib": 1503.578125,
+   "gpu_latency_batch1_ms": {
+    "device": "cuda",
+    "count": 200,
+    "mean_ms": 3.7210812899661505,
+    "p50_ms": 3.413661499735099,
+    "p95_ms": 5.907680950053871,
+    "max_ms": 8.76956499996595
+   }
+  },
+  "20261102-110508_model_a_seed1": {
+   "best_val": {
+    "ade": 0.161177858710289,
+    "fde": 0.4008556306362152,
+    "l1": 0.09140455722808838,
+    "n": 11029,
+    "ade_lane_follow": 0.19111110270023346,
+    "fde_lane_follow": 0.46802034974098206,
+    "ade_left": 0.11433586478233337,
+    "fde_left": 0.2750992774963379,
+    "ade_right": 0.13282229006290436,
+    "fde_right": 0.3425227105617523,
+    "ade_straight": 0.13237141072750092,
+    "fde_straight": 0.3445417582988739,
+    "ade_moving": 0.1962529718875885,
+    "ade_stationary": 0.04132973030209541,
+    "epoch": 9
+   },
+   "train_seconds": 796.1825330070001,
+   "peak_vram_alloc_mib": 743.85498046875,
+   "peak_vram_reserved_mib": 1350.0,
+   "process_rss_mib": 1568.7265625,
+   "gpu_latency_batch1_ms": {
+    "device": "cuda",
+    "count": 200,
+    "mean_ms": 3.379461159991024,
+    "p50_ms": 2.9733285000475007,
+    "p95_ms": 5.1662827499967445,
+    "max_ms": 9.86947199999122
+   }
+  },
+  "20261102-111841_model_a_seed2": {
+   "best_val": {
+    "ade": 0.16061407327651978,
+    "fde": 0.40427926182746887,
+    "l1": 0.09097716957330704,
+    "n": 11029,
+    "ade_lane_follow": 0.19392190873622894,
+    "fde_lane_follow": 0.4791962206363678,
+    "ade_left": 0.11059506982564926,
+    "fde_left": 0.27381861209869385,
+    "ade_right": 0.12801532447338104,
+    "fde_right": 0.3286452293395996,
+    "ade_straight": 0.12802664935588837,
+    "fde_straight": 0.3425053060054779,
+    "ade_moving": 0.19625400006771088,
+    "ade_stationary": 0.03883594647049904,
+    "epoch": 10
+   },
+   "train_seconds": 785.6469760529994,
+   "peak_vram_alloc_mib": 743.85498046875,
+   "peak_vram_reserved_mib": 1350.0,
+   "process_rss_mib": 1731.6875,
+   "gpu_latency_batch1_ms": {
+    "device": "cuda",
+    "count": 200,
+    "mean_ms": 3.3875599199700446,
+    "p50_ms": 3.052856999602227,
+    "p95_ms": 4.717845449704324,
+    "max_ms": 18.313340000531753
+   }
+  }
+ }
+}

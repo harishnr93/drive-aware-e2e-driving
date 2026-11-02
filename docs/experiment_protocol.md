@@ -119,6 +119,8 @@ files by a script, never typed by hand.
 
 | Date | Deviation | Reason |
 |---|---|---|
+| 2026-11-02 | Route counts after the Phase 4 pilot (§7): with 50 test_id routes, the per-model 95% CI on the collision-episode rate is about ±0.11 (p ≈ 0.18). Detecting a 0.10 absolute difference between two policies at that rate needs roughly 120+ paired routes. **From Phase 5 on, test sets use 150 routes (10 maps × 15)**; Phase 4 numbers stay at 50 | Fixed from pilot variance, as the protocol requires, before any Phase 5 result exists |
+| 2026-11-02 | Model A results on test_id are reported as obtained. The junction-appearance change, DAgger and target-point conditioning are listed as open decisions, not applied | Changing the benchmark after seeing test results requires explicit sign-off and re-running all baselines |
 | 2026-11-01 | Split seed ranges are defined in `configs/data/expert_v1.yaml` (map seeds 1000–1039 train, 2000–2005 val, 3000–3009 test_id; 4000+/5000+/6000+ reserved), not in `configs/evaluation/splits.yaml` | The dataset config is the single source; the evaluation config will reference the same ranges |
 | 2026-11-01 | Noise injection is steering-only (§2 said steering/speed) | Lateral recovery is the main covariate-shift concern. Speed noise is deferred and listed as a limitation |
 | 2026-11-01 | test_id statistics and montage were inspected for data QA | No model has been evaluated on test_id. The no-tuning rule applies to model selection |

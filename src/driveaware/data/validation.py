@@ -57,8 +57,12 @@ def validate_episode_arrays(
     return errors
 
 
-def validate_split(split_dir: str | Path, timing: TimingConfig = TimingConfig(),
-                   sample_labels: int = 500, seed: int = 0) -> dict[str, Any]:
+def validate_split(
+    split_dir: str | Path,
+    timing: TimingConfig = TimingConfig(),
+    sample_labels: int = 500,
+    seed: int = 0,
+) -> dict[str, Any]:
     """Validate a consolidated split (frames.npz + images.npy + episodes.json)."""
     split_dir = Path(split_dir)
     errors: list[str] = []

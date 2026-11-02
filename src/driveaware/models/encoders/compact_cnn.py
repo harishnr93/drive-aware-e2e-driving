@@ -17,12 +17,16 @@ IMAGE_MEAN = (0.5, 0.5, 0.5)
 IMAGE_STD = (0.25, 0.25, 0.25)
 
 
-def normalize_images(images_uint8: torch.Tensor) -> torch.Tensor:
-    """[B, H, W, 3] uint8 -> [B, 3, H, W] float32, normalised."""
+def normalize_images(
+    images_uint8: torch.Tensor,
+    mean: torch.Tensor | None = None,
+    std: torch.Tensor | None = None,
+) -> torch.Tensor:
+    """[B, H, W, 3] uint8 -> [B, 3, H, W] float32, normalised per channel (values in [0, 1])."""
     x = images_uint8.permute(0, 3, 1, 2).float().div_(255.0)
-    mean = x.new_tensor(IMAGE_MEAN).view(1, 3, 1, 1)
-    std = x.new_tensor(IMAGE_STD).view(1, 3, 1, 1)
-    return (x - mean) / std
+    mean = x.new_tensor(IMAGE_MEAN) if mean is None else mean.to(x)
+    std = x.new_tensor(IMAGE_STD) if std is None else std.to(x)
+    return (x - mean.view(1, 3, 1, 1)) / std.view(1, 3, 1, 1)
 
 
 def _block(c_in: int, c_out: int) -> nn.Sequential:

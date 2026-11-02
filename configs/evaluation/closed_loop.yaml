@@ -1,0 +1,8 @@
+# Closed-loop scenario sets. Maps match the dataset splits (no new maps); route and traffic
+# seeds are derived independently of the dataset's, so the routes driven are new.
+route_length: 300.0
+max_duration: 150.0
+seed: 0
+sets:
+  val:     {map_seed_start: 2000, num_maps: 6,  routes_per_map: 5}
+  test_id: {map_seed_start: 3000, num_maps: 10, routes_per_map: 5}

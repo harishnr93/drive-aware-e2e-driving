@@ -57,8 +57,9 @@ def consolidate_split(split_dir: str | Path, timing: TimingConfig = TimingConfig
         n = len(ep["images"])
         if images is None:
             h, w = ep["images"].shape[1:3]
-            images = np.lib.format.open_memmap(split_dir / "images.npy", mode="w+",
-                                               dtype=np.uint8, shape=(total, h, w, 3))
+            images = np.lib.format.open_memmap(
+                split_dir / "images.npy", mode="w+", dtype=np.uint8, shape=(total, h, w, 3)
+            )
         images[start : start + n] = ep["images"]
         valid = label_validity(ep["perturbed"], n, stride, num)
         fields["episode_index"].append(np.full(n, i, dtype=np.int32))
@@ -72,8 +73,9 @@ def consolidate_split(split_dir: str | Path, timing: TimingConfig = TimingConfig
         fields["perturbed"].append(ep["perturbed"])
         fields["label_valid"].append(valid)
         fields["waypoints"].append(all_waypoints(ep["ego_pose"], valid, stride, num))
-        meta.update({"file": f.name, "start": start, "end": start + n,
-                     "num_labelled": int(valid.sum())})
+        meta.update(
+            {"file": f.name, "start": start, "end": start + n, "num_labelled": int(valid.sum())}
+        )
         start += n
     images.flush()
     del images
@@ -84,8 +86,11 @@ def consolidate_split(split_dir: str | Path, timing: TimingConfig = TimingConfig
         "num_frames": int(total),
         "num_labelled": int(arrays["label_valid"].sum()),
         "image_shape": [int(h), int(w), 3],
-        "timing": {"control_period": timing.control_period, "waypoint_dt": timing.waypoint_dt,
-                   "num_waypoints": num},
+        "timing": {
+            "control_period": timing.control_period,
+            "waypoint_dt": timing.waypoint_dt,
+            "num_waypoints": num,
+        },
         "episodes": metas,
     }
     (split_dir / "episodes.json").write_text(json.dumps(summary, indent=1))
