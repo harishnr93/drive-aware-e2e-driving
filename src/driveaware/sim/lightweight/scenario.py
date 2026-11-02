@@ -32,7 +32,7 @@ class ScenarioSpec:
     map: MapConfig = field(default_factory=MapConfig)
     traffic: TrafficConfig = field(default_factory=TrafficConfig)
     route_length: float = 400.0  # m, minimum
-    max_duration: float = 120.0  # s
+    max_duration: float = 180.0  # s
     initial_speed: float = 0.0  # m/s
 
     @property

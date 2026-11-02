@@ -32,6 +32,11 @@ Format: decision, alternatives considered, rationale. Status values: **accepted*
 | D25 | Pedestrians wait at the kerb and never walk into vehicles; vehicles yield to pedestrians on the carriageway | pedestrians ignore vehicles | Without this, NPC–pedestrian overlaps were frequent (34 in 4×120 s). Now 0 in 6×120 s | accepted |
 | D26 | LANE_DEPARTURE and TIMEOUT added to `EventType`; not part of the default failure set | lane departure counted as a failure | Lane departure is an infraction metric. Its inclusion in failure labels is decided in Phase 6 | accepted |
 | D27 | Controller (pure pursuit + PID) and a traffic-unaware route follower implemented in Phase 2 | wait until Phase 3 | The simulator acceptance test needs a closed-loop driver. The Phase 3 expert extends the route follower | accepted |
+| D28 | Expert = route pure pursuit + IDM over corridor leaders, pedestrians on the carriageway and red/yellow stop lines | MPC or lattice planner | Simple, transparent and deterministic. 0 infractions on 100 held-out episodes | accepted (Phase 3) |
+| D29 | Vehicles yield only to pedestrians on the carriageway; pedestrians wait at the kerb if a vehicle would reach the crosswalk within 3 s | yield to any nearby pedestrian | The earlier rule deadlocked: vehicles waited for kerb-side pedestrians, who waited for the vehicles (4 stalls in 30 episodes, now 0 in 100) | accepted |
+| D30 | DART-style steering bursts in 50% of episodes; labels require a noise-free 2 s window | DAgger; no noise | Gives recovery samples (8.5% of train) without labelling the noise itself. DAgger is still possible later | accepted |
+| D31 | Keep every frame in per-split memmaps and select samples via `label_valid` | store only labelled frames | Temporal models need predecessors of the first labelled frame | accepted |
+| D32 | On collision, physics stops but the clock completes the control period | end the step at contact time | Keeps every observation on the 10 Hz grid. The event keeps its exact time | accepted |
 
 ## Rejected or deferred ideas
 

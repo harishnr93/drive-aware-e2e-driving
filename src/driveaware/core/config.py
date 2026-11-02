@@ -53,6 +53,11 @@ def _convert(hint: Any, value: Any, path: str) -> Any:
         if len(args) == 1:
             return _convert(args[0], value, path)
         return value
+    if origin is dict:
+        if not isinstance(value, dict):
+            raise ConfigError(f"'{path}' expects a mapping")
+        _, val_t = typing.get_args(hint) or (Any, Any)
+        return {k: _convert(val_t, v, f"{path}.{k}") for k, v in value.items()}
     if origin in (tuple,) and isinstance(value, list):
         return tuple(value)
     if hint is float and isinstance(value, int) and not isinstance(value, bool):

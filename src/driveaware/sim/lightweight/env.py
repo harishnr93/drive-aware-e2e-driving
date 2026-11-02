@@ -190,7 +190,7 @@ class LightweightDrivingSim:
             v0 = ag.npc_desired_speed(npc, path, self.cfg.idm)
             npc_acc.append(ag.idm_accel(npc.v, v0, gap, dv, self.cfg.idm))
 
-        for _ in range(tm.substeps):
+        for k in range(tm.substeps):
             st.ego = step_vehicle(st.ego, action, self.cfg.vehicle, tm.dt_sim)
             for npc, acc in zip(st.npcs, npc_acc, strict=True):
                 if npc.active:
@@ -200,6 +200,9 @@ class LightweightDrivingSim:
             collided = self._check_collision()
             if collided is not None:
                 events.append(Event(EventType.COLLISION, st.t, collided))
+                # Physics freezes at contact, but the clock completes the control period so
+                # observations stay on the uniform 10 Hz grid.
+                st.t += (tm.substeps - 1 - k) * tm.dt_sim
                 break
         st.step += 1
         st.rng_state = self._rng.bit_generator.state

@@ -119,4 +119,8 @@ files by a script, never typed by hand.
 
 | Date | Deviation | Reason |
 |---|---|---|
+| 2026-11-01 | Split seed ranges are defined in `configs/data/expert_v1.yaml` (map seeds 1000–1039 train, 2000–2005 val, 3000–3009 test_id; 4000+/5000+/6000+ reserved), not in `configs/evaluation/splits.yaml` | The dataset config is the single source; the evaluation config will reference the same ranges |
+| 2026-11-01 | Noise injection is steering-only (§2 said steering/speed) | Lateral recovery is the main covariate-shift concern. Speed noise is deferred and listed as a limitation |
+| 2026-11-01 | test_id statistics and montage were inspected for data QA | No model has been evaluated on test_id. The no-tuning rule applies to model selection |
+| 2026-11-01 | Default `max_duration` 180 s (dataset: 150 s for 300 m routes) | Split-phase waits make 400 m routes take about 113 s on average. 120 s caused timeouts of a correct expert |
 | 2026-11-01 | Added LANE_DEPARTURE (non-terminal infraction) and TIMEOUT events. Stall timeout is 40 s instead of the 20 s in `research_plan.md` §5 | Lane-departure rate is a required metric. 20 s is shorter than the worst split-phase red wait (~27 s), so a compliant driver would be flagged as stalled |

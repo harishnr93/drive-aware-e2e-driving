@@ -80,6 +80,7 @@ class Box:
     width: float
     height: float
     ident: int
+    on_road: bool = True  # pedestrians: on the carriageway (vehicles yield only then)
 
     def corners(self) -> np.ndarray:
         return box_corners(self.x, self.y, self.yaw, self.length, self.width)
@@ -99,9 +100,15 @@ def ped_pose(ped: PedState, cw: Crosswalk) -> tuple[float, float, float]:
     return float(x), float(y), yaw
 
 
+KERB = 1.0  # m of pavement walked before the carriageway (half_span = road half width + 1)
+
+
 def ped_box(ped: PedState, cw: Crosswalk, ident: int) -> Box:
     x, y, yaw = ped_pose(ped, cw)
-    return Box(AgentKind.PEDESTRIAN, x, y, yaw, ped.speed, PED_SIZE, PED_SIZE, PED_HEIGHT, ident)
+    on_road = KERB < ped.progress < 2.0 * cw.half_span - KERB
+    return Box(
+        AgentKind.PEDESTRIAN, x, y, yaw, ped.speed, PED_SIZE, PED_SIZE, PED_HEIGHT, ident, on_road
+    )
 
 
 def parked_box(car: ParkedCar, ident: int) -> Box:
@@ -120,18 +127,26 @@ def idm_accel(v: float, v0: float, gap: float | None, dv: float, p: IDMParams) -
     return float(np.clip(p.a_max * acc, -p.b_max, p.a_max))
 
 
-def npc_leader(
-    npc: NPCState,
+def find_leader(
     path: Route,
+    s: float,
+    v: float,
+    length: float,
+    width: float,
     others: list[Box],
-    self_ident: int,
+    self_ident: int | None,
     road_map: RoadMap,
     t: float,
     p: IDMParams,
 ) -> tuple[float | None, float]:
-    """Return (gap, closing speed) to the most constraining obstacle ahead, or (None, 0)."""
+    """Most constraining obstacle ahead of a vehicle whose centre is at arc length ``s``.
+
+    Considers actors in the lane corridor, pedestrians anywhere on the carriageway ahead, and a
+    virtual stopped obstacle at the next stop line if its signal requires stopping.
+    Returns (bumper-to-bumper gap, closing speed), or (None, 0) for a free road.
+    """
     ds = 0.5
-    s_ahead = npc.s + np.arange(0.0, p.lookahead, ds)
+    s_ahead = s + np.arange(0.0, p.lookahead, ds)
     pts = path.path.interpolate(s_ahead)
     best_gap: float | None = None
     best_dv = 0.0
@@ -146,34 +161,50 @@ def npc_leader(
             if box.ident == self_ident:
                 continue
             is_ped = box.kind == AgentKind.PEDESTRIAN
+            if is_ped and not box.on_road:
+                continue  # waiting at the kerb or already off the carriageway
             # Vehicles: lane corridor. Pedestrians: anyone on the carriageway ahead (crosswalk
             # yielding; they cross from the kerb and do not yield themselves).
-            reach = ped_yield_reach if is_ped else 0.5 * NPC_WIDTH + 0.5 * box.width + 0.2
+            reach = ped_yield_reach if is_ped else 0.5 * width + 0.5 * box.width + 0.2
             if lateral[i] > reach:
                 continue
             if k[i] == 0:
-                # Projects onto the NPC's own centre: only a leader if it is in front of us.
+                # Projects onto our own centre: only a leader if it is in front of us.
                 yaw = pts[0, 2]
                 rel = np.array([box.x - pts[0, 0], box.y - pts[0, 1]])
                 ahead = rel @ np.array([math.cos(yaw), math.sin(yaw)])
-                if ahead <= (0.5 * NPC_LENGTH - 0.5 if is_ped else 0.0):
+                if ahead <= (0.5 * length - 0.5 if is_ped else 0.0):
                     continue
-            gap = k[i] * ds - 0.5 * (NPC_LENGTH + box.length)
+            gap = k[i] * ds - 0.5 * (length + box.length)
             if best_gap is None or gap < best_gap:
                 best_gap = gap
-                best_dv = npc.v - box.v * math.cos(box.yaw - pts[k[i], 2])
+                best_dv = v - box.v * math.cos(box.yaw - pts[k[i], 2])
     for stop in path.stop_lines:
-        if not (npc.s - 0.5 * NPC_LENGTH < stop.s < npc.s + p.lookahead):
+        if not (s - 0.5 * length < stop.s < s + p.lookahead):
             continue
         state = road_map.signals[stop.node].state(t, stop.approach)
-        gap = stop.s - npc.s - 0.5 * NPC_LENGTH
+        gap = stop.s - s - 0.5 * length
         must_stop = state == SignalState.RED or (
-            state == SignalState.YELLOW and gap > npc.v**2 / (2 * p.yellow_decel)
+            state == SignalState.YELLOW and gap > v**2 / (2 * p.yellow_decel)
         )
         if must_stop and gap > -0.5 and (best_gap is None or gap < best_gap):
-            best_gap, best_dv = max(gap, 0.0), npc.v
+            best_gap, best_dv = max(gap, 0.0), v
         break  # only the next stop line matters
     return best_gap, best_dv
+
+
+def npc_leader(
+    npc: NPCState,
+    path: Route,
+    others: list[Box],
+    self_ident: int,
+    road_map: RoadMap,
+    t: float,
+    p: IDMParams,
+) -> tuple[float | None, float]:
+    return find_leader(
+        path, npc.s, npc.v, NPC_LENGTH, NPC_WIDTH, others, self_ident, road_map, t, p
+    )
 
 
 def npc_desired_speed(npc: NPCState, path: Route, p: IDMParams) -> float:
@@ -192,17 +223,24 @@ def step_npc(npc: NPCState, accel: float, path: Route, dt: float) -> None:
         npc.active = False
 
 
-def step_ped(ped: PedState, cw: Crosswalk, dt: float, vehicles: list[Box] = ()) -> bool:
+def step_ped(
+    ped: PedState,
+    cw: Crosswalk,
+    dt: float,
+    vehicles: list[Box] = (),
+    gap_acceptance: float = 3.0,
+) -> bool:
     """Advance a pedestrian; returns False once it has finished crossing.
 
-    Pedestrians wait at the kerb while a vehicle occupies the crosswalk, and never step into a
-    vehicle. They do not otherwise yield (moving vehicles must yield to them).
+    Pedestrians wait at the kerb while a vehicle occupies the crosswalk or would reach it within
+    ``gap_acceptance`` seconds, and never step into a vehicle. Once on the carriageway they do
+    not yield (vehicles must yield to them).
     """
-    kerb = 1.0  # m of pavement before the carriageway (half_span = road half width + 1)
+    kerb = KERB
     nxt = PedState(
         ped.crosswalk, ped.direction, ped.progress + ped.speed * dt, ped.speed, ped.along
     )
-    if ped.progress <= kerb < nxt.progress and _crosswalk_occupied(cw, vehicles):
+    if ped.progress <= kerb < nxt.progress and _crosswalk_blocked(cw, vehicles, gap_acceptance):
         return True
     x, y, yaw = ped_pose(nxt, cw)
     mine = box_corners(x, y, yaw, PED_SIZE + 0.3, PED_SIZE + 0.3)
@@ -213,14 +251,20 @@ def step_ped(ped: PedState, cw: Crosswalk, dt: float, vehicles: list[Box] = ()) 
     return ped.progress < 2.0 * cw.half_span
 
 
-def _crosswalk_occupied(cw: Crosswalk, vehicles: list[Box]) -> bool:
+def _crosswalk_blocked(cw: Crosswalk, vehicles: list[Box], gap_acceptance: float) -> bool:
+    """True if a vehicle is on the crosswalk or will reach it within ``gap_acceptance`` s."""
     along = np.array([math.cos(cw.road_yaw), math.sin(cw.road_yaw)])
     across = np.array([-along[1], along[0]])
     for v in vehicles:
         rel = np.array([v.x, v.y]) - cw.center
-        if (
-            abs(rel @ along) < 0.5 * (cw.depth + v.length) + 0.5
-            and abs(rel @ across) < cw.half_span
-        ):
+        if abs(rel @ across) > cw.half_span:
+            continue
+        a = float(rel @ along)
+        clearance = abs(a) - 0.5 * (cw.depth + v.length)
+        if clearance < 0.5:
+            return True
+        # Speed component towards the crosswalk.
+        toward = -math.copysign(1.0, a) * v.v * math.cos(v.yaw - cw.road_yaw)
+        if toward > 0.5 and clearance / toward < gap_acceptance:
             return True
     return False

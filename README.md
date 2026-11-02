@@ -14,7 +14,8 @@ safety, and under which conditions. See [docs/research_plan.md](docs/research_pl
 | 0 | Research design, architecture, environment assessment | done |
 | 1 | Repository, environment, core contracts, smoke training | done |
 | 2 | Lightweight closed-loop simulator, controller, replay/video | done |
-| 3+ | Expert data, models, introspection, … | not started |
+| 3 | Rule-based expert, expert dataset (128k frames), labels, validation, Dataset | done |
+| 4+ | Models, introspection, risk adaptation, … | not started |
 
 No research results exist yet.
 
@@ -45,6 +46,9 @@ ruff check . && ruff format --check . && mypy
 python scripts/smoke_train.py --set batch_size=4      # environment validation (synthetic data)
 python scripts/smoke_train.py --set device=cpu steps=100
 python scripts/sim_demo.py                            # simulator demo: replay logs + MP4 videos
+python scripts/collect_dataset.py --config configs/data/expert_v1.yaml   # ~9 min, 6.7 GB
+python scripts/inspect_dataset.py data/expert_v1/train                  # stats + label montage
+python scripts/eval_expert.py                         # expert reference (100 episodes)
 ```
 
 Each run writes `experiments/<timestamp>_<name>/` containing `config.yaml`, `env.json`
@@ -60,7 +64,8 @@ src/driveaware/
   core/             contracts (types, frames, timing), config, seeding, logging, hardware, run dirs
   sim/              simulator interface; lightweight/ = maps, vehicle, traffic, events, camera
   control/          pure pursuit + PID waypoint controller
-  expert/           privileged drivers (route follower; full expert in Phase 3)
+  expert/           privileged drivers: route follower, rule-based expert
+  data/             collection, labels, storage (memmaps), validation, PyTorch Dataset
   viz/              replay logs and video export
   models/encoders/  compact CNN encoder
 tests/              CPU-only unit tests

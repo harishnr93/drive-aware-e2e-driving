@@ -9,7 +9,7 @@ dist/
 .mypy_cache/
 # run outputs and data (summaries are committed explicitly)
 experiments/*
-data/
+/data/
 *.pt
 *.npz
 *.npy

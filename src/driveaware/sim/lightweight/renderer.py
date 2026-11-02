@@ -118,6 +118,20 @@ class CameraRenderer:
         bg = np.where((dz < -1e-6)[..., None], FOG, bg)
         self.background = bg.astype(np.uint8)
 
+    def project_ego(self, points_ego: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """Project ego-frame points ([N, 2] on the ground, or [N, 3]) to output-image pixels.
+
+        Returns (uv [N, 2] at the output resolution, mask of points in front of the camera).
+        """
+        pts = np.asarray(points_ego, dtype=np.float64)
+        if pts.shape[1] == 2:
+            pts = np.column_stack([pts, np.zeros(len(pts))])
+        cam = (pts - self.cam_pos) @ self.R.T
+        front = cam[:, 2] > 0.1
+        z = np.where(front, cam[:, 2], 1.0)
+        uv = np.column_stack([self.fx * cam[:, 0] / z + self.cx, self.fy * cam[:, 1] / z + self.cy])
+        return uv / self.cfg.ssaa, front
+
     # ----------------------------------------------------------------------------------------
 
     def render(

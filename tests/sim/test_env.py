@@ -183,6 +183,9 @@ def test_collision_detected():
             break
     coll = [e for e in res.events if e.type == EventType.COLLISION]
     assert coll and coll[0].info["agent_kind"] == 2.0 and res.done
+    # Observation time stays on the control grid even though physics stopped at contact.
+    assert res.observation.timestamp == pytest.approx(0.1 * res.observation.frame_id)
+    assert coll[0].timestamp <= res.observation.timestamp + 1e-9
 
 
 def test_lane_departure_then_recovery():

@@ -46,3 +46,20 @@ def test_roundtrip_and_overrides(tmp_path):
     cfg = load_config(Cfg, path, {"optim.lr": 0.5, "batch_size": 2})
     assert cfg.batch_size == 2 and cfg.optim.lr == 0.5
     assert to_dict(cfg)["optim"]["betas"] == [0.9, 0.999]
+
+
+@dataclass
+class Split:
+    n: int = 1
+
+
+@dataclass
+class WithDict:
+    splits: dict[str, Split] = field(default_factory=dict)
+
+
+def test_dict_of_dataclasses():
+    cfg = from_dict(WithDict, {"splits": {"train": {"n": 3}, "val": {}}})
+    assert cfg.splits["train"].n == 3 and cfg.splits["val"].n == 1
+    with pytest.raises(ConfigError, match="splits.train"):
+        from_dict(WithDict, {"splits": {"train": {"m": 1}}})
