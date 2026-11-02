@@ -23,7 +23,16 @@ THEMES = {
         "muted": "#898781",
         "grid": "#e1e0d9",
         "axis": "#c3c2b7",
-        "series": ["#2a78d6", "#eb6834", "#1baf7a", "#eda100"],
+        "series": [
+            "#2a78d6",
+            "#eb6834",
+            "#1baf7a",
+            "#eda100",
+            "#e87ba4",
+            "#008300",
+            "#6250d6",
+            "#e34948",
+        ],
     },
     "dark": {
         "surface": "#1a1a19",
@@ -32,13 +41,31 @@ THEMES = {
         "muted": "#898781",
         "grid": "#2c2c2a",
         "axis": "#383835",
-        "series": ["#3987e5", "#d95926", "#199e70", "#c98500"],
+        "series": [
+            "#3987e5",
+            "#d95926",
+            "#199e70",
+            "#c98500",
+            "#d55181",
+            "#008300",
+            "#9085e9",
+            "#e66767",
+        ],
     },
 }
 
 
 # Colour follows the entity, never its position in a particular chart.
-ENTITY_SLOT = {"Expert": 0, "Model A": 1, "Model B": 2, "Model B (H=1)": 3}
+ENTITY_SLOT = {
+    "Expert": 0,
+    "Model A": 1,
+    "Model B": 2,
+    "Model B (H=1)": 3,
+    "Introspection (C)": 4,
+    "All heuristics": 5,
+    "Context heuristic": 6,
+    "Oracle (privileged)": 7,
+}
 
 
 def entity_color(t: dict, label: str, fallback: int) -> str:
@@ -159,14 +186,14 @@ def closed_loop_bars(
                     ax.errorbar(
                         i,
                         mean,
-                        yerr=[[mean - 100 * ci[0]], [100 * ci[1] - mean]],
+                        yerr=[[mean - scale * ci[0]], [scale * ci[1] - mean]],
                         color=t["ink2"],
                         capsize=4,
                         linewidth=1.2,
                     )
-                    top = max(top, 100 * ci[1])
+                    top = max(top, scale * ci[1])
                 ax.annotate(
-                    f"{mean:.1f}",
+                    f"{mean:.1f}" if scale == 100.0 else f"{mean:.2f}",
                     (i, top),
                     xytext=(0, 5),
                     textcoords="offset points",
@@ -179,7 +206,13 @@ def closed_loop_bars(
                 range(len(labels)), [lb.replace(" (", "\n(") for lb in labels], fontsize=8
             )
             peak = max(scale * max(agents[lb][key]) for lb in labels)
-            ax.set_ylim(0, 112 if key == "completion" else max(1.0, 1.3 * peak))
+            if key == "completion" or (scale == 100.0 and peak > 60):
+                top_lim = 112.0
+            elif scale == 1.0 and peak <= 1.0 and peak > 0.5:
+                top_lim = 1.1  # probabilities / AUROC-like scores
+            else:
+                top_lim = max(1.0, 1.3 * peak)
+            ax.set_ylim(0, top_lim)
             ax.set_title(ylabel, color=t["ink"], fontsize=10, loc="left")
         fig.suptitle(title, color=t["ink"], fontsize=11, x=0.02, ha="left")
         fig.text(0.02, 0.01, caption, color=t["muted"], fontsize=7)
@@ -303,5 +336,144 @@ def ablation_line(
         lo, hi = min(ys + [y for _, y in notes or []]), max(ys + [y for _, y in notes or []])
         ax.set_ylim(lo - 0.25 * (hi - lo) - 1e-3, hi + 0.35 * (hi - lo) + 1e-3)
         fig.tight_layout()
+        fig.savefig(out.with_name(f"{out.stem}_{mode}.png"), facecolor=t["surface"])
+        plt.close(fig)
+
+
+def roc_pr(curves: dict[str, dict], out: Path, title: str, caption: str = "") -> None:
+    """curves: name -> {fpr, tpr, recall, precision, auroc, pr_auc, prevalence, dashed?}."""
+    for mode, t in THEMES.items():
+        fig, (ax1, ax2) = _figure(t, 2, 8.4, 3.7)
+        ax1.plot([0, 1], [0, 1], color=t["axis"], linewidth=1)
+        prev = next(iter(curves.values()))["prevalence"]
+        ax2.axhline(prev, color=t["axis"], linewidth=1)
+        ax2.annotate(
+            f"prevalence {prev:.3f}",
+            (1.0, prev),
+            xytext=(-2, 3),
+            textcoords="offset points",
+            ha="right",
+            fontsize=7,
+            color=t["muted"],
+        )
+        for k, (name, c) in enumerate(curves.items()):
+            color = entity_color(t, name, k)
+            ls = (0, (4, 2)) if c.get("dashed") else "-"
+            ax1.plot(
+                c["fpr"],
+                c["tpr"],
+                color=color,
+                linewidth=2,
+                linestyle=ls,
+                label=f"{name}  {c['auroc']:.3f}",
+            )
+            ax2.plot(
+                c["recall"],
+                c["precision"],
+                color=color,
+                linewidth=2,
+                linestyle=ls,
+                label=f"{name}  {c['pr_auc']:.3f}",
+            )
+        ax1.set(xlim=(0, 1), ylim=(0, 1.01))
+        ax2.set(xlim=(0, 1), ylim=(0, 1.01))
+        ax1.set_xlabel("false-positive rate", color=t["ink2"], fontsize=9)
+        ax1.set_ylabel("true-positive rate", color=t["ink2"], fontsize=9)
+        ax2.set_xlabel("recall", color=t["ink2"], fontsize=9)
+        ax2.set_ylabel("precision", color=t["ink2"], fontsize=9)
+        ax1.set_title("ROC (legend: AUROC)", color=t["ink"], fontsize=10, loc="left")
+        ax2.set_title("Precision–recall (legend: PR-AUC)", color=t["ink"], fontsize=10, loc="left")
+        ax1.legend(frameon=False, fontsize=7, labelcolor=t["ink2"], loc="lower right")
+        ax2.legend(frameon=False, fontsize=7, labelcolor=t["ink2"], loc="upper right")
+        fig.suptitle(title, color=t["ink"], fontsize=11, x=0.02, ha="left")
+        if caption:
+            fig.text(0.02, 0.01, caption, color=t["muted"], fontsize=7)
+        fig.tight_layout(rect=(0, 0.04 if caption else 0, 1, 0.94))
+        fig.savefig(out.with_name(f"{out.stem}_{mode}.png"), facecolor=t["surface"])
+        plt.close(fig)
+
+
+def reliability_diagram(series: dict[str, dict], out: Path, title: str) -> None:
+    """series: name -> {confidence, frequency, ece}; plotted against the diagonal (log axes)."""
+    for mode, t in THEMES.items():
+        fig, (ax,) = _figure(t, 1, 4.6, 4.0)
+        lo = 1e-3
+        ax.plot([lo, 1], [lo, 1], color=t["axis"], linewidth=1)
+        ax.annotate(
+            "perfect calibration",
+            (0.25, 0.25),
+            xytext=(4, -10),
+            textcoords="offset points",
+            fontsize=7,
+            color=t["muted"],
+            rotation=40,
+        )
+        for k, (name, r) in enumerate(series.items()):
+            # Same entity drawn twice (e.g. before/after calibration): same colour, line style
+            # tells them apart.
+            color = entity_color(t, r.get("entity", name), k)
+            conf = np.asarray(r["confidence"])
+            freq = np.asarray(r["frequency"])
+            keep = (conf >= lo) & (freq >= lo)  # log axes: drop bins below the plotted range
+            conf, freq = conf[keep], freq[keep]
+            ax.plot(
+                conf,
+                freq,
+                color=color,
+                linewidth=2,
+                linestyle=(0, (4, 2)) if r.get("dashed") else "-",
+                marker="o" if not r.get("dashed") else "s",
+                markersize=5,
+                markeredgecolor=t["surface"],
+                markeredgewidth=1.2,
+                label=f"{name} (ECE {r['ece']:.3f})",
+            )
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        ax.set(xlim=(lo, 1), ylim=(lo, 1))
+        ax.grid(axis="x", color=t["grid"], linewidth=0.8)
+        ax.set_xlabel("predicted failure probability", color=t["ink2"], fontsize=9)
+        ax.set_ylabel("observed failure frequency", color=t["ink2"], fontsize=9)
+        ax.set_title(title, color=t["ink"], fontsize=10, loc="left")
+        ax.legend(frameon=False, fontsize=7, labelcolor=t["ink2"], loc="upper left")
+        fig.tight_layout()
+        fig.savefig(out.with_name(f"{out.stem}_{mode}.png"), facecolor=t["surface"])
+        plt.close(fig)
+
+
+def histogram(
+    values: list[float],
+    out: Path,
+    title: str,
+    xlabel: str,
+    entity: str,
+    bins: np.ndarray,
+    caption: str = "",
+) -> None:
+    for mode, t in THEMES.items():
+        fig, (ax,) = _figure(t, 1, 5.6, 3.2)
+        ax.hist(
+            values,
+            bins=bins,
+            color=entity_color(t, entity, 4),
+            edgecolor=t["surface"],
+            linewidth=1.5,
+        )
+        med = float(np.median(values)) if len(values) else float("nan")
+        ax.axvline(med, color=t["ink2"], linewidth=1, linestyle=(0, (4, 3)))
+        ax.annotate(
+            f"median {med:.1f} s",
+            (med, ax.get_ylim()[1]),
+            xytext=(4, -12),
+            textcoords="offset points",
+            fontsize=8,
+            color=t["ink2"],
+        )
+        ax.set_xlabel(xlabel, color=t["ink2"], fontsize=9)
+        ax.set_ylabel("detected failure events", color=t["ink2"], fontsize=9)
+        ax.set_title(title, color=t["ink"], fontsize=10, loc="left")
+        if caption:
+            fig.text(0.02, 0.01, caption, color=t["muted"], fontsize=7)
+        fig.tight_layout(rect=(0, 0.05 if caption else 0, 1, 1))
         fig.savefig(out.with_name(f"{out.stem}_{mode}.png"), facecolor=t["surface"])
         plt.close(fig)

@@ -119,6 +119,10 @@ files by a script, never typed by hand.
 
 | Date | Deviation | Reason |
 |---|---|---|
+| 2026-11-02 | Phase 6: Platt scaling (scale + intercept) instead of temperature scaling, for every predictor | Weighted BCE shifts the prior. Applying the same post-hoc calibration to all predictors keeps the comparison fair |
+| 2026-11-02 | Phase 6: alarm threshold fixed on intro_cal at a 10% frame-level false-positive rate (§5 left the operating point open). Event-level detection uses the 2 s prediction horizon (D45) | Needed to report detection rate and lead time. Phase 8 will choose thresholds by intervention cost |
+| 2026-11-02 | Phase 6: ensemble-disagreement baseline (§6 item 2) deferred to Phase 7 | Requires the Phase 7 ensemble |
+| 2026-11-02 | Phase 6: added an intro_val split (maps 4016–4019) for early stopping of the head | Keeps intro_cal untouched for calibration and thresholds |
 | 2026-11-02 | Phase 5 adds a B(H=1) control agent (not in the original model ladder) | Model B's training recipe differs from model A's, so A vs B alone confounds history with recipe |
 | 2026-11-02 | The first Phase 5 evaluation run computed model B's *open-loop* test metrics with history 1 (a CLI default bug). Closed loop was unaffected (the agent reads the history from the checkpoint). Fixed: `evaluate_checkpoint` now uses the checkpoint's history, with a regression test. The reported open-loop numbers were recomputed by `scripts/summarize_phase5.py` | Bug found during the run; nothing reported used the wrong numbers |
 | 2026-11-02 | Route counts after the Phase 4 pilot (§7): with 50 test_id routes, the per-model 95% CI on the collision-episode rate is about ±0.11 (p ≈ 0.18). Detecting a 0.10 absolute difference between two policies at that rate needs roughly 120+ paired routes. **From Phase 5 on, test sets use 150 routes (10 maps × 15)**; Phase 4 numbers stay at 50 | Fixed from pilot variance, as the protocol requires, before any Phase 5 result exists |

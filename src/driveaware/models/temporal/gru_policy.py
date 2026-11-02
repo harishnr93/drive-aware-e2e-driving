@@ -68,6 +68,8 @@ class TemporalPolicy(nn.Module):
         if self.cfg.speed_history:
             x = torch.cat([x, (speed / self.cfg.speed_scale).unsqueeze(-1)], dim=-1)
         _, h = self.gru(x)
+        # Read-only side output for introspection (never fed back into the policy).
+        self.last_hidden = h[-1].detach()
         meas = torch.cat(
             [
                 (speed[:, -1] / self.cfg.speed_scale).unsqueeze(1),

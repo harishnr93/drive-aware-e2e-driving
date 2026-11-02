@@ -266,9 +266,260 @@ def phase5(summary_path: Path) -> None:
     print("wrote phase-5 charts to", ASSETS)
 
 
+def _intro_scenarios(name: str):
+    from driveaware.evaluation.closed_loop import scenario_set
+
+    cfg = __import__("yaml").safe_load(
+        (REPO_ROOT / "configs/evaluation/closed_loop.yaml").read_text()
+    )
+    sc = cfg["sets"][name]
+    base = ScenarioSpec(0, 0, 0, route_length=cfg["route_length"], max_duration=cfg["max_duration"])
+    maps = list(range(sc["map_seed_start"], sc["map_seed_start"] + sc["num_maps"]))
+    return scenario_set(name, maps, sc["routes_per_map"], base, cfg["seed"])
+
+
+def phase6(run_dir: Path) -> None:
+    import json
+
+    from driveaware.introspection import metrics as M
+    from driveaware.viz.charts import closed_loop_bars, histogram, reliability_diagram, roc_pr
+
+    res = json.loads((run_dir / "results.json").read_text())
+    seeds = sorted(res, key=int)
+    names = {
+        "introspection (C)": "Introspection (C)",
+        "all heuristics": "All heuristics",
+        "context (speed + command)": "Context heuristic",
+        "oracle (privileged)": "Oracle (privileged)",
+    }
+    # ROC / PR curves for seed 0 (test_id, all frames)
+    z = np.load(run_dir / f"test_predictions_seed{seeds[0]}.npz")
+    n_ep = len([k for k in z.files if k.startswith("y_")])
+    y = np.concatenate([z[f"y_{i}"] for i in range(n_ep)])
+    keys = {
+        "Introspection (C)": "head",
+        "All heuristics": "all",
+        "Context heuristic": "ctx",
+        "Oracle (privileged)": "oracle",
+    }
+    curves = {}
+    for label, key in keys.items():
+        s_ = np.concatenate([z[f"p_{key}_{i}"] for i in range(n_ep)])
+        fpr, tpr = M.roc_curve(y, s_)
+        rec, prec = M.pr_curve(y, s_)
+        curves[label] = {
+            "fpr": fpr,
+            "tpr": tpr,
+            "recall": rec,
+            "precision": prec,
+            "auroc": M.auroc(y, s_),
+            "pr_auc": M.average_precision(y, s_),
+            "prevalence": float(y.mean()),
+            "dashed": "Oracle" in label,
+        }
+    roc_pr(
+        curves,
+        ASSETS / "introspection_roc_pr.png",
+        "Predicting a failure within 2 s (test_id, model B seed 0)",
+        caption=f"{len(y):,} decision steps from {n_ep} test episodes · oracle uses privileged "
+        "state (dashed, reference only)",
+    )
+    # Metric bars across seeds
+    agents = {}
+    for key, label in names.items():
+        agents[label] = {
+            "auroc": [res[s]["predictors"][key]["auroc"] for s in seeds],
+            "pr_auc": [res[s]["predictors"][key]["pr_auc"] for s in seeds],
+            "detection": [
+                res[s]["predictors"][key]["event_level"]["detection_rate"] for s in seeds
+            ],
+        }
+    closed_loop_bars(
+        agents,
+        ASSETS / "introspection_metrics.png",
+        title="Failure prediction on test_id (150 routes per policy seed)",
+        caption="bars: mean over 3 policy seeds · dots: seeds · detection: share of failure "
+        "events with an active alarm in the 2 s before them (threshold: 10% FPR on "
+        "intro_cal)",
+        panels=(
+            ("auroc", "AUROC", 1.0),
+            ("pr_auc", "PR-AUC", 1.0),
+            ("detection", "Events detected (%)", 100.0),
+        ),
+    )
+    r0 = res[seeds[0]]["predictors"]["introspection (C)"]
+    reliability_diagram(
+        {
+            "calibrated (Platt on intro_cal)": {
+                **r0["reliability"],
+                "ece": r0["ece"],
+                "entity": "Introspection (C)",
+            },
+            "uncalibrated": {
+                **r0["uncalibrated"]["reliability"],
+                "ece": r0["uncalibrated"]["ece"],
+                "entity": "Introspection (C)",
+                "dashed": True,
+            },
+        },
+        ASSETS / "introspection_reliability.png",
+        "Introspection calibration (test_id, seed 0)",
+    )
+    leads = [
+        v
+        for s in seeds
+        for v in res[s]["predictors"]["introspection (C)"]["event_level"]["lead_times_s"]
+    ]
+    histogram(
+        leads,
+        ASSETS / "introspection_lead_time.png",
+        "Warning lead time of detected failures",
+        "seconds before the failure event",
+        "Introspection (C)",
+        np.arange(0, max(8.0, max(leads) + 0.5), 0.5),
+        caption="pooled over 3 seeds; alarms persisting from earlier count from when they "
+        "were raised",
+    )
+    print("wrote phase-6 charts to", ASSETS)
+
+
+def warning_gif(
+    run_dir: Path, seed: int, outcome: str, name: str, seconds: float, stride: int
+) -> None:
+    """Replay a test episode with the introspection probability as a live timeline."""
+    import json
+
+    from driveaware.core.types import EventType
+    from driveaware.evaluation.closed_loop import AgentSpec, run_episode
+
+    res_json = json.loads((run_dir / f"results_seed{seed}.json").read_text())
+    thr = res_json["predictors"]["introspection (C)"]["event_level"]["threshold"]
+    policy = res_json["policy_run"]
+    ep_dir = REPO_ROOT / "data/introspection" / policy / "test_id"
+    files = sorted(ep_dir.glob("ep_*.npz"))
+    pick = next(
+        i for i, f in enumerate(files) if EventType(int(np.load(f)["outcome"])).name == outcome
+    )
+    z = np.load(run_dir / f"test_predictions_seed{seed}.npz")
+    p, ts = z[f"p_head_{pick}"], z[f"t_{pick}"]
+    ep = np.load(files[pick])
+    fail_t = [
+        t
+        for t, ty in zip(ep["event_time"], ep["event_type"], strict=True)
+        if EventType(int(ty)).name
+        in ("COLLISION", "OFF_ROAD", "ROUTE_DEVIATION", "RED_LIGHT", "STALL")
+    ]
+    spec = _intro_scenarios("test_id")[pick]
+    row = run_episode(
+        spec, AgentSpec("policy", str(REPO_ROOT / "experiments" / policy / "best.pt")), record=True
+    )
+    sim = LightweightDrivingSim()
+    sim.reset(spec)
+    td = TopDownRenderer(sim.episode.road_map)
+    cam = sim.episode.renderer
+    frames_all = row["frames"]
+    n_steps = len(p)
+    start = max(0, n_steps - int(seconds * 10))
+    images = []
+    above = p > thr
+    run = np.zeros(len(p), int)
+    for i, a in enumerate(above):
+        run[i] = (run[i - 1] + 1 if i > 0 else 1) if a else 0
+    for k in list(range(start, n_steps, stride)) + [n_steps]:
+        res, wp = frames_all[min(k, len(frames_all) - 1)]
+        frame = compose_frame(res, td)
+        if wp is not None:
+            uv, front = cam.project_ego(wp)
+            for (u, v), ok in zip(uv * 3, front, strict=True):
+                if ok:
+                    cv2.circle(frame, (int(u), int(v)), 4, (0, 255, 255), -1, cv2.LINE_AA)
+        frames_all_h, w = frame.shape[:2]
+        strip_h = 110
+        strip = np.full((strip_h, w, 3), 26, np.uint8)
+        kk = min(k, n_steps - 1)
+        t_now = ts[kk]
+        if k == n_steps and fail_t:  # final frame: advance the timeline to the terminal event
+            t_now = max(t_now, max(fail_t))
+        win = 10.0
+        x0, x1, y0, y1 = 40, w - 150, 12, strip_h - 22
+
+        def xy(t, pv, t_now=t_now, x0=x0, x1=x1, y0=y0, y1=y1, win=win):
+            return (int(x0 + (t - (t_now - win)) / win * (x1 - x0)), int(y1 - pv * (y1 - y0)))
+
+        cv2.rectangle(strip, (x0, y0), (x1, y1), (60, 60, 58), 1)
+        ty = xy(t_now, thr)[1]
+        cv2.line(strip, (x0, ty), (x1, ty), (150, 150, 150), 1, cv2.LINE_AA)
+        cv2.putText(
+            strip,
+            f"alarm threshold {thr:.2f}",
+            (x0 + 4, ty - 4),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.38,
+            (170, 170, 170),
+            1,
+            cv2.LINE_AA,
+        )
+        sel = (ts > t_now - win) & (ts <= t_now)
+        pts = np.array([xy(t, pv) for t, pv in zip(ts[sel], p[sel], strict=True)], np.int32)
+        if len(pts) > 1:
+            cv2.polylines(strip, [pts], False, (232, 123, 164), 2, cv2.LINE_AA)
+        for tf in fail_t:
+            if t_now - win < tf <= t_now + 0.15:
+                xf = xy(tf, 0)[0]
+                cv2.line(strip, (xf, y0), (xf, y1), (227, 73, 72), 2)
+        cv2.putText(
+            strip,
+            "P(failure within 2 s)",
+            (x0, strip_h - 6),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.42,
+            (200, 200, 200),
+            1,
+            cv2.LINE_AA,
+        )
+        cv2.putText(
+            strip,
+            f"{p[kk]:.2f}",
+            (x1 + 12, y0 + 30),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.9,
+            (240, 240, 240),
+            2,
+            cv2.LINE_AA,
+        )
+        if run[kk] >= 2:
+            cv2.rectangle(strip, (x1 + 10, y0 + 45), (w - 10, y0 + 75), (227, 73, 72), -1)
+            cv2.putText(
+                strip,
+                "WARNING",
+                (x1 + 18, y0 + 67),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                (255, 255, 255),
+                2,
+                cv2.LINE_AA,
+            )
+        full = np.vstack([frame, strip])
+        small = cv2.resize(full, None, fx=0.62, fy=0.62, interpolation=cv2.INTER_AREA)
+        images.append(Image.fromarray(small).quantize(colors=64, method=Image.Quantize.MEDIANCUT))
+    images[0].save(
+        ASSETS / name,
+        save_all=True,
+        append_images=images[1:],
+        duration=int(100 * stride),
+        loop=0,
+        optimize=True,
+    )
+    print("wrote", ASSETS / name, "episode", pick, "outcome", outcome, "frames", len(images))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("what", choices=["sim", "rollout", "charts", "phase5"])
+    parser.add_argument("what", choices=["sim", "rollout", "charts", "phase5", "phase6", "warning"])
+    parser.add_argument("--run-dir")
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--outcome", default="COLLISION")
+    parser.add_argument("--seconds", type=float, default=12.0)
     parser.add_argument("--summary")
     parser.add_argument("--report")
     parser.add_argument("--runs", default="experiments/*_model_a_seed*")
@@ -293,6 +544,12 @@ def main() -> None:
         charts(Path(args.report), args.runs)
     elif args.what == "phase5":
         phase5(Path(args.summary))
+    elif args.what == "phase6":
+        phase6(Path(args.run_dir))
+    elif args.what == "warning":
+        warning_gif(
+            Path(args.run_dir), args.seed, args.outcome, args.name, args.seconds, args.stride
+        )
     else:
         from driveaware.evaluation.closed_loop import scenario_set
 

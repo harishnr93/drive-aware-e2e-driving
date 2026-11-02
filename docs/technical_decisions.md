@@ -46,6 +46,11 @@ Format: decision, alternatives considered, rationale. Status values: **accepted*
 | D39 | Primary model B gets image history + **current** speed only; speed history is an ablation | feed per-frame speeds to the GRU | Past ego motion invites the inertia/copycat shortcut. The ablation's open-loop gain came from cruising frames, consistent with that | accepted |
 | D40 | Open-loop analysis by motion situation (holding, start from rest, stopping, cruising) | aggregate ADE only | Targets the cases where a single frame lacks timing/motion information (Phase 5 task 5) | accepted |
 | D41 | Incremental temporal inference: encode only the newest frame, keep a feature buffer | re-encode all H frames per step | Same output (tested), constant per-step encoder cost | accepted |
+| D42 | Introspection trained on recorded closed-loop rollouts of the frozen policy B, on reserved maps (intro_train/val/cal); test = the Phase 5 test rollouts, reproduced exactly | label expert data; reuse BC splits | Failures are policy-specific. Exact reproduction makes C's test set identical to B's driving test set | accepted (Phase 6) |
+| D43 | Primary failure label excludes lane departure (D26 resolved); lane departure is an ablation label | include lane departure | Lane departure is a frequent, mild infraction (about 8/km) that would dominate the label. With it included, AUROC is unchanged (0.970) and PR-AUC rises to 0.85 | accepted |
+| D44 | Platt scaling (scale + intercept) for all predictors instead of temperature only | temperature scaling | Class-weighted training shifts the logit prior, which a temperature cannot undo | accepted (protocol deviation logged) |
+| D45 | Event detection requires an active alarm within the prediction horizon before the event; lead time counts from when that alarm segment was raised | fixed 5 s detection window | Keeps detection and false-alarm definitions consistent. A test caught the earlier inconsistency | accepted |
+| D46 | Anticipation analysis stratified by privileged lateral offset and time-to-failure (analysis only) | aggregate metrics only | Separates anticipating failures from recognising ongoing ones | accepted |
 
 ## Rejected or deferred ideas
 

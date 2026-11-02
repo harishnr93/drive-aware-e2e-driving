@@ -3,8 +3,8 @@
 Uncertainty-Aware End-to-End Autonomous Driving with Self-Introspection and Risk-Adaptive Planning.
 
 A compact camera-based driving policy (a CNN, and a CNN + GRU variant) predicts future ego
-waypoints. An introspection head will predict the probability of an impending driving failure,
-and a risk-adaptive planner will act on it. The study asks whether calibrated introspection
+waypoints. An introspection head predicts the probability of a driving failure within the next
+2 s from the policy's own internal state, and a risk-adaptive planner will act on it (Phase 8). The study asks whether calibrated introspection
 improves closed-loop safety, and under which conditions. Hypotheses, baselines and the
 evaluation protocol were fixed before any results: see
 [docs/research_plan.md](docs/research_plan.md) and
@@ -36,7 +36,8 @@ results are below.</sub>
 | 3 | Rule-based expert, expert dataset (128k frames), labels, validation | done |
 | 4 | Model A: single-frame CNN behaviour cloning, open- and closed-loop evaluation | done |
 | 5 | Model B: temporal (GRU) policy with controls and ablations | done |
-| 6–12 | Introspection, uncertainty, risk adaptation, robustness, CARLA, report | not started |
+| 6 | Failure prediction (introspection) with heuristic and privileged baselines | done |
+| 7–12 | Uncertainty, risk adaptation, robustness, CARLA, report | not started |
 
 ## Simulator and data
 
@@ -70,6 +71,79 @@ the policy sees (160×96, upscaled). Right: the top-down debug view.</sub></td>
 All numbers are on held-out `test_id` maps. All agents drive the same scenarios, and learned
 models are reported as the mean ± sd over 3 training seeds. Full tables, paired statistics and
 diagnoses are in [docs/results.md](docs/results.md).
+
+### Phase 6: can the driving model predict its own failures? Yes, with caveats.
+
+A 45k-parameter head reads the frozen policy's GRU state, speed, command and predicted waypoints.
+It outputs a calibrated probability that a collision, off-road, route deviation, red-light
+violation or stall happens within the next 2 s. It is trained on the policy's own closed-loop
+rollouts on separate maps.
+
+<table>
+<tr>
+<td><img src="docs/assets/warning_collision.gif" alt="Model B approaching a stopped vehicle: the failure-probability timeline below the camera rises above the alarm threshold and shows WARNING about 1.4 s before a rear-end collision"></td>
+<td><img src="docs/assets/warning_offroad.gif" alt="Model B cutting the inside of a bend: the failure probability rises and the WARNING flag appears about 1 s before the vehicle leaves the road"></td>
+</tr>
+<tr>
+<td><sub>First <code>test_id</code> episode ending in a <b>collision</b> (model B, seed 0): the
+probability (pink) crosses the alarm threshold and WARNING is shown about 1.4 s before the
+rear-end impact.</sub></td>
+<td><sub>First test episode ending <b>off-road</b>: the car cuts the inside of a bend, and the
+warning appears about 1 s before it leaves the road. The red vertical line marks the failure
+event.</sub></td>
+</tr>
+</table>
+
+| Predicting failure within 2 s (test_id, 3 policy seeds) | AUROC | PR-AUC | ECE | Events warned in time | False alarms / km |
+|---|---|---|---|---|---|
+| **Introspection (C)** | **0.971 ± 0.003** | **0.796 ± 0.012** | **0.011** | **98.7%** | 19.2 |
+| All non-privileged heuristics combined | 0.828 ± 0.021 | 0.307 ± 0.018 | 0.020 | 70.3% | 19.2 |
+| "Near a junction" heuristic (speed + command) | 0.780 ± 0.013 | 0.194 ± 0.020 | 0.036 | 36.8% | 4.6 |
+| Privileged reference (TTC, lateral offset, junction) | 0.865 ± 0.015 | 0.364 ± 0.011 | 0.035 | 59.7% | 9.0 |
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/introspection_metrics_dark.png">
+    <img src="docs/assets/introspection_metrics_light.png" alt="Bars for introspection, all heuristics, context heuristic and privileged oracle: AUROC 0.97, 0.83, 0.78, 0.87; PR-AUC 0.80, 0.31, 0.19, 0.36; events detected 98.7, 70.3, 36.8, 59.7 percent" width="860">
+  </picture>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/introspection_roc_pr_dark.png">
+    <img src="docs/assets/introspection_roc_pr_light.png" alt="ROC and precision-recall curves: introspection dominates both the heuristics and the privileged reference across operating points" width="760">
+  </picture>
+</p>
+
+- **It anticipates, it does not just notice.** Restricted to moments 1–2 s before a failure,
+  while the car is still within 1 m of its lane centre, introspection keeps AUROC 0.972 and
+  PR-AUC 0.57. The heuristics drop to PR-AUC 0.07. Some failure labels (route deviation,
+  off-road) are only registered once things look bad, so this check matters.
+- **It beats the best heuristic for every seed (H2).** ΔAUROC is +0.12 to +0.17 and ΔPR-AUC +0.47
+  to +0.51, all with episode-bootstrap CIs well above zero.
+- **Calibrated probabilities need a held-out step.** Raw head outputs have ECE 0.04–0.08;
+  Platt scaling on a separate calibration split brings test ECE to 0.006–0.014.
+- **Caveats.** Model B fails often and systematically (135 of 150 test episodes contain a
+  failure), which makes its failures predictable. Expect lower numbers for a more competent
+  policy, and under distribution shift (Phase 9). At this operating point there are about 19
+  alarm onsets per km. Whether acting on them helps is Phase 8's question.
+
+<table>
+<tr>
+<td width="50%">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/introspection_reliability_dark.png">
+    <img src="docs/assets/introspection_reliability_light.png" alt="Reliability diagram on log axes: calibrated introspection close to the diagonal (ECE 0.006), uncalibrated over-confident at high probabilities (ECE 0.051)">
+  </picture>
+</td>
+<td>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/introspection_lead_time_dark.png">
+    <img src="docs/assets/introspection_lead_time_light.png" alt="Histogram of warning lead times of detected failures, peaking around 2 seconds with a median of 2.2 seconds and a tail to 6 seconds">
+  </picture>
+</td>
+</tr>
+</table>
 
 ### Phase 5: does temporal context help? Not in this setup.
 
@@ -192,10 +266,15 @@ done
 python scripts/eval_closed_loop.py --set-name test_id --expert --workers 6 \
     --checkpoints experiments/*_model_a_seed*/best.pt experiments/*_model_b_h*_seed*/best.pt
 python scripts/summarize_phase5.py --report experiments/<ts>_closed_loop_test_id/report.json
+python scripts/run_introspection.py --seeds 0 1 2         # rollouts + introspection, ~75 min
+python scripts/analyze_introspection.py --run-dir experiments/<ts>_introspection
 
 python scripts/make_figures.py sim                        # README figures
 python scripts/make_figures.py charts --report experiments/<ts>_closed_loop_test_id/report.json
 python scripts/make_figures.py phase5 --summary docs/results/phase5_temporal.json
+python scripts/make_figures.py phase6 --run-dir experiments/<ts>_introspection
+python scripts/make_figures.py warning --run-dir experiments/<ts>_introspection --outcome COLLISION \
+    --name warning_collision.gif --stride 2
 python scripts/make_figures.py rollout --checkpoint experiments/<ts>_model_a_seed0/best.pt
 ```
 
@@ -219,6 +298,7 @@ src/driveaware/
   training/         behaviour-cloning trainer; cached-feature trainer for temporal models
   agents/           closed-loop policy agent (observations only, no privileged state)
   evaluation/       open-loop metrics, closed-loop evaluation, paired statistics
+  introspection/    rollout recording, failure labels, features, head, baselines, metrics
   viz/              replay, video export, result charts
 tests/              CPU-only unit tests
 ```

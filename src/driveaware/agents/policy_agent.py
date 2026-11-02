@@ -49,6 +49,8 @@ class WaypointPolicyAgent:
         self._incremental = hasattr(model, "forward_features") and config.history > 1
         self.last_prediction: TrajectoryPrediction | None = None
         self.last_latency_ms = 0.0
+        self.last_hidden: np.ndarray | None = None
+        self.last_feature: np.ndarray | None = None
 
     def reset(self) -> None:
         self.controller.reset()
@@ -93,6 +95,10 @@ class WaypointPolicyAgent:
         self.last_latency_ms = (time.perf_counter() - t0) * 1e3
         pred = TrajectoryPrediction(obs.timestamp, waypoints, self.target_speed(waypoints))
         self.last_prediction = pred
+        # Introspection inputs at time t (all derived from observations up to t).
+        hidden = getattr(self.model, "last_hidden", None)
+        self.last_hidden = None if hidden is None else hidden[0].float().cpu().numpy()
+        self.last_feature = self._features[-1].float().cpu().numpy() if self._features else None
         return pred
 
     def __call__(self, obs: Observation) -> ControlCommand:
