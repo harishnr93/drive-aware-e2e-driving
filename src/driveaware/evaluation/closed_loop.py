@@ -62,10 +62,11 @@ def _make_agent(spec: AgentSpec):
     from driveaware.training.bc import load_policy
 
     torch.set_num_threads(1)
-    model, _ = load_policy(spec.checkpoint, "cpu")
-    return WaypointPolicyAgent(
-        model, "cpu", AgentConfig(history=spec.history, history_stride=spec.history_stride)
-    )
+    model, cfg = load_policy(spec.checkpoint, "cpu")
+    # The checkpoint's own history settings are authoritative.
+    history = getattr(cfg, "history", spec.history)
+    stride = getattr(cfg, "history_stride", spec.history_stride)
+    return WaypointPolicyAgent(model, "cpu", AgentConfig(history=history, history_stride=stride))
 
 
 _WORKER: dict[str, Any] = {}

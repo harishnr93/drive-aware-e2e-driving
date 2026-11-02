@@ -25,6 +25,8 @@ from driveaware.core.logging import MetricsWriter, get_logger
 from driveaware.core.seeding import seed_everything, worker_init_fn
 from driveaware.core.types import Command
 from driveaware.data.dataset import DrivingDataset
+from driveaware.data.labels import SITUATIONS, motion_situations
+from driveaware.models.temporal.gru_policy import TemporalConfig, TemporalPolicy
 from driveaware.models.trajectory.single_frame import SingleFrameConfig, SingleFramePolicy
 
 log = get_logger("training")
@@ -35,6 +37,10 @@ class TrainConfig:
     name: str = "model_a"
     model: str = "single_frame"
     single_frame: SingleFrameConfig = field(default_factory=SingleFrameConfig)
+    temporal: TemporalConfig = field(default_factory=TemporalConfig)
+    history: int = 1  # frames of input history (temporal models)
+    history_stride: int = 1  # control steps between history frames
+    encoder_checkpoint: str | None = None  # model A checkpoint providing the (frozen) encoder
     data_root: str = "data/expert_v1"
     train_split: str = "train"
     val_split: str = "val"
@@ -58,6 +64,8 @@ class TrainConfig:
 def build_model(cfg: TrainConfig) -> nn.Module:
     if cfg.model == "single_frame":
         return SingleFramePolicy(cfg.single_frame)
+    if cfg.model == "temporal":
+        return TemporalPolicy(cfg.temporal)
     raise ValueError(f"unknown model {cfg.model}")
 
 
@@ -103,45 +111,63 @@ def model_inputs(batch: dict, device: torch.device, history: bool = False):
     return image, speed, batch["command"].to(device, non_blocking=True)
 
 
-@torch.no_grad()
-def evaluate_open_loop(model: nn.Module, loader: DataLoader, device: torch.device) -> dict:
-    model.eval()
-    ade, fde, l1, cmds, moving = [], [], [], [], []
-    for batch in loader:
-        pred = model(*model_inputs(batch, device)).float().cpu()
-        target = batch["waypoints"]
-        err = torch.linalg.norm(pred - target, dim=-1)  # [B, 10]
-        ade.append(err.mean(dim=1))
-        fde.append(err[:, -1])
-        l1.append((pred - target).abs().mean(dim=(1, 2)))
-        cmds.append(batch["command"])
-        moving.append(torch.linalg.norm(target[:, -1], dim=-1) >= 0.5)
-    ade_t, fde_t, l1_t = torch.cat(ade), torch.cat(fde), torch.cat(l1)
-    cmd_t, mov_t = torch.cat(cmds), torch.cat(moving)
+def trajectory_metrics(
+    pred: torch.Tensor, target: torch.Tensor, command: torch.Tensor, speed_now: torch.Tensor
+) -> dict:
+    """ADE/FDE overall, per command, moving/stationary and per motion situation (CPU tensors)."""
+    err = torch.linalg.norm(pred - target, dim=-1)  # [N, 10]
+    ade_t, fde_t = err.mean(dim=1), err[:, -1]
     out: dict[str, Any] = {
         "ade": float(ade_t.mean()),
         "fde": float(fde_t.mean()),
-        "l1": float(l1_t.mean()),
+        "l1": float((pred - target).abs().mean()),
         "n": int(len(ade_t)),
     }
     for c in Command:
-        m = cmd_t == int(c)
+        m = command == int(c)
         if m.any():
             out[f"ade_{c.name.lower()}"] = float(ade_t[m].mean())
             out[f"fde_{c.name.lower()}"] = float(fde_t[m].mean())
-    for name, m in (("moving", mov_t), ("stationary", ~mov_t)):
+    moving = torch.linalg.norm(target[:, -1], dim=-1) >= 0.5
+    for name, m in (("moving", moving), ("stationary", ~moving)):
         if m.any():
             out[f"ade_{name}"] = float(ade_t[m].mean())
+    situ = motion_situations(speed_now.numpy(), target.numpy())
+    for name in SITUATIONS:
+        m = torch.from_numpy(situ == name)
+        if m.any():
+            out[f"ade_{name}"] = float(ade_t[m].mean())
+            out[f"n_{name}"] = int(m.sum())
     return out
+
+
+@torch.no_grad()
+def evaluate_open_loop(model: nn.Module, loader: DataLoader, device: torch.device) -> dict:
+    model.eval()
+    history = getattr(model, "uses_history", False)
+    preds, targets, cmds, speeds = [], [], [], []
+    for batch in loader:
+        preds.append(model(*model_inputs(batch, device, history)).float().cpu())
+        targets.append(batch["waypoints"])
+        cmds.append(batch["command"])
+        speeds.append(batch["speed"][:, -1])
+    return trajectory_metrics(
+        torch.cat(preds), torch.cat(targets), torch.cat(cmds), torch.cat(speeds)
+    )
 
 
 def train(cfg: TrainConfig, run_dir: Path) -> dict:
     seed_everything(cfg.seed, cfg.deterministic)
     device = resolve_device(cfg.device)
     root = Path(cfg.data_root)
-    train_ds = DrivingDataset(root / cfg.train_split)
-    val_ds = DrivingDataset(root / cfg.val_split)
+    hist = {"history": cfg.history, "history_stride": cfg.history_stride}
+    train_ds = DrivingDataset(root / cfg.train_split, **hist)
+    val_ds = DrivingDataset(root / cfg.val_split, **hist)
     model = build_model(cfg).to(device)
+    uses_history = getattr(model, "uses_history", False)
+    if cfg.encoder_checkpoint:  # initialise the encoder from a trained model (fine-tuned here)
+        base, _ = load_policy(cfg.encoder_checkpoint, device)
+        model.encoder.load_state_dict(base.encoder.state_dict())
     mean, std = image_statistics(train_ds, cfg.norm_stat_frames, cfg.seed)
     model.image_mean.copy_(torch.as_tensor(mean, dtype=torch.float32))
     model.image_std.copy_(torch.as_tensor(std, dtype=torch.float32))
@@ -161,7 +187,10 @@ def train(cfg: TrainConfig, run_dir: Path) -> dict:
     train_loader = DataLoader(
         train_ds, batch_size=cfg.batch_size, sampler=sampler, drop_last=True, **loader_kw
     )
-    val_loader = DataLoader(val_ds, batch_size=256, shuffle=False, **loader_kw)
+    # Keep validation memory bounded for multi-frame inputs (4 GB GPU).
+    val_loader = DataLoader(
+        val_ds, batch_size=max(16, 256 // cfg.history), shuffle=False, **loader_kw
+    )
 
     opt = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
     steps_per_epoch = len(train_loader)
@@ -190,7 +219,7 @@ def train(cfg: TrainConfig, run_dir: Path) -> dict:
         t0 = time.perf_counter()
         running, n = 0.0, 0
         for batch in train_loader:
-            image, speed, command = model_inputs(batch, device)
+            image, speed, command = model_inputs(batch, device, uses_history)
             image = photometric_jitter(image, cfg, jitter_gen)
             target = batch["waypoints"].to(device, non_blocking=True)
             loss = nn.functional.l1_loss(model(image, speed, command), target)
@@ -234,7 +263,12 @@ def train(cfg: TrainConfig, run_dir: Path) -> dict:
     metrics.close()
 
     resources = snapshot().as_dict()
-    lat = measure_latency(model, device)
+    if uses_history:
+        from driveaware.training.temporal import measure_temporal_latency
+
+        lat = measure_temporal_latency(model, device, cfg.history)
+    else:
+        lat = measure_latency(model, device)
     result = {
         "params": n_params,
         "best_val": best,

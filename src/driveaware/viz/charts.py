@@ -23,7 +23,7 @@ THEMES = {
         "muted": "#898781",
         "grid": "#e1e0d9",
         "axis": "#c3c2b7",
-        "series": ["#2a78d6", "#eb6834", "#1baf7a"],
+        "series": ["#2a78d6", "#eb6834", "#1baf7a", "#eda100"],
     },
     "dark": {
         "surface": "#1a1a19",
@@ -32,9 +32,17 @@ THEMES = {
         "muted": "#898781",
         "grid": "#2c2c2a",
         "axis": "#383835",
-        "series": ["#3987e5", "#d95926", "#199e70"],
+        "series": ["#3987e5", "#d95926", "#199e70", "#c98500"],
     },
 }
+
+
+# Colour follows the entity, never its position in a particular chart.
+ENTITY_SLOT = {"Expert": 0, "Model A": 1, "Model B": 2, "Model B (H=1)": 3}
+
+
+def entity_color(t: dict, label: str, fallback: int) -> str:
+    return t["series"][ENTITY_SLOT.get(label, fallback)]
 
 
 def _style(ax, t: dict) -> None:
@@ -67,7 +75,7 @@ def training_curves(
         ymax = 0.0
         for k, (label, ys) in enumerate(runs.items()):
             x = np.arange(1, len(ys) + 1)
-            color = t["series"][k]
+            color = t["series"][k]  # seeds of one model: slots in fixed order
             ax.plot(x, ys, color=color, linewidth=2, label=label, solid_capstyle="round")
             ax.plot(
                 x[-1],
@@ -116,20 +124,21 @@ def closed_loop_bars(
     out: Path,
     title: str = "Closed-loop driving on test_id (50 routes)",
     caption: str = "bars: mean over training seeds · dots: individual training seeds",
+    panels: tuple[tuple[str, str, float], ...] | None = None,
 ) -> None:
     """agents: label -> {"completion": [per-seed], "completion_ci": (lo, hi) | None,
     "collision": [per-seed], "collision_ci": ...}. Values are fractions (0-1)."""
-    panels = (
-        ("completion", "Route completion (%)"),
-        ("collision", "Episodes with a collision (%)"),
+    panels = panels or (
+        ("completion", "Route completion (%)", 100.0),
+        ("collision", "Episodes with a collision (%)", 100.0),
     )
     labels = list(agents)
     for mode, t in THEMES.items():
-        fig, axes = _figure(t, 2, 7.2, 3.3)
-        for ax, (key, ylabel) in zip(axes, panels, strict=True):
+        fig, axes = _figure(t, len(panels), 3.6 * len(panels) + 0.6 * len(labels), 3.4)
+        for ax, (key, ylabel, scale) in zip(axes, panels, strict=True):
             for i, label in enumerate(labels):
-                vals = 100 * np.asarray(agents[label][key], dtype=float)
-                color = t["series"][i]
+                vals = scale * np.asarray(agents[label][key], dtype=float)
+                color = entity_color(t, label, i)
                 mean = float(vals.mean())
                 ax.bar(i, mean, width=0.55, color=color, edgecolor=t["surface"], linewidth=2)
                 if len(vals) > 1:
@@ -166,16 +175,133 @@ def closed_loop_bars(
                     fontsize=9,
                     color=t["ink"],
                 )
-            ax.set_xticks(range(len(labels)), labels, fontsize=9)
-            ax.set_ylim(
-                0,
-                112
-                if key == "completion"
-                else max(5.0, 1.3 * max(100 * max(agents[lb][key]) for lb in labels)),
+            ax.set_xticks(
+                range(len(labels)), [lb.replace(" (", "\n(") for lb in labels], fontsize=8
             )
+            peak = max(scale * max(agents[lb][key]) for lb in labels)
+            ax.set_ylim(0, 112 if key == "completion" else max(1.0, 1.3 * peak))
             ax.set_title(ylabel, color=t["ink"], fontsize=10, loc="left")
         fig.suptitle(title, color=t["ink"], fontsize=11, x=0.02, ha="left")
         fig.text(0.02, 0.01, caption, color=t["muted"], fontsize=7)
         fig.tight_layout(rect=(0, 0.04, 1, 0.95))
+        fig.savefig(out.with_name(f"{out.stem}_{mode}.png"), facecolor=t["surface"])
+        plt.close(fig)
+
+
+def grouped_bars(
+    groups: list[str],
+    series: dict[str, list[float]],
+    out: Path,
+    title: str,
+    ylabel: str,
+    caption: str = "",
+    errors: dict[str, list[float]] | None = None,
+) -> None:
+    """Grouped bars: x = groups (e.g. motion situations), one bar per series (entity colours)."""
+    names = list(series)
+    width = 0.8 / len(names)
+    for mode, t in THEMES.items():
+        fig, (ax,) = _figure(t, 1, 7.2, 3.4)
+        for k, name in enumerate(names):
+            x = np.arange(len(groups)) + (k - (len(names) - 1) / 2) * width
+            vals = np.asarray(series[name], dtype=float)
+            ax.bar(
+                x,
+                vals,
+                width=width * 0.92,
+                color=entity_color(t, name, k),
+                label=name,
+                edgecolor=t["surface"],
+                linewidth=1.5,
+            )
+            if errors and name in errors:
+                ax.errorbar(
+                    x, vals, yerr=errors[name], fmt="none", ecolor=t["ink2"], capsize=2, linewidth=1
+                )
+            errs = (errors or {}).get(name, [0.0] * len(vals))
+            for xi, v, e in zip(x, vals, errs, strict=True):
+                ax.annotate(
+                    f"{v:.2f}",
+                    (xi, v + e),  # above the whisker
+                    xytext=(0, 2),
+                    textcoords="offset points",
+                    ha="center",
+                    fontsize=7,
+                    color=t["ink2"],
+                )
+        ax.set_xticks(range(len(groups)), groups, fontsize=9)
+        ax.set_ylabel(ylabel, color=t["ink2"], fontsize=9)
+        ax.set_title(title, color=t["ink"], fontsize=11, loc="left", pad=22)
+        ax.legend(
+            frameon=False,
+            fontsize=8,
+            labelcolor=t["ink2"],
+            loc="lower left",
+            bbox_to_anchor=(0.0, 1.0),
+            ncol=len(names),
+            borderaxespad=0.3,
+        )
+        top = max(max(v) + max((errors or {}).get(n, [0.0] * len(v))) for n, v in series.items())
+        ax.set_ylim(0, 1.15 * top)
+        if caption:
+            fig.text(0.02, 0.01, caption, color=t["muted"], fontsize=7)
+        fig.tight_layout(rect=(0, 0.04 if caption else 0, 1, 1))
+        fig.savefig(out.with_name(f"{out.stem}_{mode}.png"), facecolor=t["surface"])
+        plt.close(fig)
+
+
+def ablation_line(
+    xs: list[float],
+    ys: list[float],
+    out: Path,
+    title: str,
+    xlabel: str,
+    ylabel: str,
+    entity: str = "Model B",
+    notes: list[tuple[str, float]] | None = None,
+) -> None:
+    """Single-series line with point labels; optional reference points drawn as hollow markers."""
+    for mode, t in THEMES.items():
+        fig, (ax,) = _figure(t, 1, 5.6, 3.2)
+        color = entity_color(t, entity, 2)
+        ax.plot(
+            xs,
+            ys,
+            color=color,
+            linewidth=2,
+            marker="o",
+            markersize=8,
+            markeredgecolor=t["surface"],
+            markeredgewidth=2,
+        )
+        for x, y in zip(xs, ys, strict=True):
+            ax.annotate(
+                f"{y:.3f}",
+                (x, y),
+                xytext=(0, 8),
+                textcoords="offset points",
+                ha="center",
+                fontsize=8,
+                color=t["ink2"],
+            )
+        for label, y in notes or []:
+            ax.axhline(y, color=t["muted"], linewidth=1, linestyle=(0, (4, 3)))
+            ax.annotate(
+                f"{label} {y:.3f}",
+                (xs[-1], y),
+                xytext=(-4, 3),
+                textcoords="offset points",
+                ha="right",
+                fontsize=7,
+                color=t["muted"],
+            )
+        ax.set_xscale("log", base=2)
+        ax.set_xticks(xs, [str(int(x)) for x in xs])
+        ax.set_xlabel(xlabel, color=t["ink2"], fontsize=9)
+        ax.set_ylabel(ylabel, color=t["ink2"], fontsize=9)
+        ax.set_title(title, color=t["ink"], fontsize=11, loc="left")
+        lo, hi = min(ys + [y for _, y in notes or []]), max(ys + [y for _, y in notes or []])
+        ax.set_ylim(lo - 0.25 * (hi - lo) - 1e-3, hi + 0.35 * (hi - lo) + 1e-3)
+        fig.tight_layout()
         fig.savefig(out.with_name(f"{out.stem}_{mode}.png"), facecolor=t["surface"])
         plt.close(fig)

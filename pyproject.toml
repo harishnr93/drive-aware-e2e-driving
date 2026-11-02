@@ -55,6 +55,7 @@ extend-immutable-calls = [
     "driveaware.agents.policy_agent.AgentConfig",
     "driveaware.core.timing.TimingConfig",
     "driveaware.models.trajectory.single_frame.SingleFrameConfig",
+    "driveaware.models.temporal.gru_policy.TemporalConfig",
 ]
 
 [tool.mypy]

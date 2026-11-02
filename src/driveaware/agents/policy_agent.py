@@ -44,12 +44,16 @@ class WaypointPolicyAgent:
         self._buffer: deque[Observation] = deque(
             maxlen=(config.history - 1) * config.history_stride + 1
         )
+        self._features: deque[torch.Tensor] = deque(maxlen=self._buffer.maxlen)
+        # Temporal models with a frozen encoder: encode only the newest frame each step.
+        self._incremental = hasattr(model, "forward_features") and config.history > 1
         self.last_prediction: TrajectoryPrediction | None = None
         self.last_latency_ms = 0.0
 
     def reset(self) -> None:
         self.controller.reset()
         self._buffer.clear()
+        self._features.clear()
         self.last_prediction = None
 
     def target_speed(self, waypoints: np.ndarray) -> float:
@@ -61,19 +65,30 @@ class WaypointPolicyAgent:
     def predict(self, obs: Observation) -> TrajectoryPrediction:
         self._buffer.append(obs)
         t0 = time.perf_counter()
+        command = torch.tensor([int(obs.command)], dtype=torch.long, device=self.device)
         if self.cfg.history == 1:
             image = torch.from_numpy(obs.image).unsqueeze(0)
             speed = torch.tensor([obs.speed], dtype=torch.float32)
+            if getattr(self.model, "uses_history", False):
+                image, speed = image.unsqueeze(1), speed.unsqueeze(1)
+            wp = self.model(image.to(self.device), speed.to(self.device), command)
         else:  # oldest first; pad with the earliest frame available (matches the dataset)
             frames = list(self._buffer)
             idx = [
                 max(0, len(frames) - 1 - k * self.cfg.history_stride)
                 for k in range(self.cfg.history - 1, -1, -1)
             ]
-            image = torch.from_numpy(np.stack([frames[i].image for i in idx])).unsqueeze(0)
             speed = torch.tensor([[frames[i].speed for i in idx]], dtype=torch.float32)
-        command = torch.tensor([int(obs.command)], dtype=torch.long)
-        wp = self.model(image.to(self.device), speed.to(self.device), command.to(self.device))
+            speed = speed.to(self.device)
+            if self._incremental:
+                newest = torch.from_numpy(obs.image).unsqueeze(0).to(self.device)
+                self._features.append(self.model.encode_frames(newest)[0])
+                feats = list(self._features)
+                stacked = torch.stack([feats[i] for i in idx]).unsqueeze(0)
+                wp = self.model.forward_features(stacked, speed, command)
+            else:
+                image = torch.from_numpy(np.stack([frames[i].image for i in idx])).unsqueeze(0)
+                wp = self.model(image.to(self.device), speed, command)
         waypoints = wp[0].float().cpu().numpy()
         self.last_latency_ms = (time.perf_counter() - t0) * 1e3
         pred = TrajectoryPrediction(obs.timestamp, waypoints, self.target_speed(waypoints))

@@ -98,7 +98,7 @@ def main() -> None:
         for name, spec in agents.items():
             if spec.kind == "policy":
                 report["agents"][name]["open_loop"] = evaluate_checkpoint(
-                    spec.checkpoint, split_dir, history=spec.history
+                    spec.checkpoint, split_dir
                 )
     if "expert" in rows_by_agent:
         for name, rows in rows_by_agent.items():

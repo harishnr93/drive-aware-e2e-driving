@@ -119,6 +119,8 @@ files by a script, never typed by hand.
 
 | Date | Deviation | Reason |
 |---|---|---|
+| 2026-11-02 | Phase 5 adds a B(H=1) control agent (not in the original model ladder) | Model B's training recipe differs from model A's, so A vs B alone confounds history with recipe |
+| 2026-11-02 | The first Phase 5 evaluation run computed model B's *open-loop* test metrics with history 1 (a CLI default bug). Closed loop was unaffected (the agent reads the history from the checkpoint). Fixed: `evaluate_checkpoint` now uses the checkpoint's history, with a regression test. The reported open-loop numbers were recomputed by `scripts/summarize_phase5.py` | Bug found during the run; nothing reported used the wrong numbers |
 | 2026-11-02 | Route counts after the Phase 4 pilot (§7): with 50 test_id routes, the per-model 95% CI on the collision-episode rate is about ±0.11 (p ≈ 0.18). Detecting a 0.10 absolute difference between two policies at that rate needs roughly 120+ paired routes. **From Phase 5 on, test sets use 150 routes (10 maps × 15)**; Phase 4 numbers stay at 50 | Fixed from pilot variance, as the protocol requires, before any Phase 5 result exists |
 | 2026-11-02 | Model A results on test_id are reported as obtained. The junction-appearance change, DAgger and target-point conditioning are listed as open decisions, not applied | Changing the benchmark after seeing test results requires explicit sign-off and re-running all baselines |
 | 2026-11-01 | Split seed ranges are defined in `configs/data/expert_v1.yaml` (map seeds 1000–1039 train, 2000–2005 val, 3000–3009 test_id; 4000+/5000+/6000+ reserved), not in `configs/evaluation/splits.yaml` | The dataset config is the single source; the evaluation config will reference the same ranges |

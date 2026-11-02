@@ -49,3 +49,26 @@ def all_waypoints(poses: np.ndarray, valid: np.ndarray, stride: int, num: int) -
         if valid[t]:
             out[t] = future_waypoints(poses, t, stride, num)
     return out
+
+
+SITUATIONS = ("holding", "start_from_rest", "stopping", "cruising")
+
+
+def motion_situations(speed: np.ndarray, waypoints: np.ndarray) -> np.ndarray:
+    """Label each sample with a motion situation from its current speed and its 2 s label.
+
+    holding:          stopped now and still within 0.5 m after 2 s
+    start_from_rest:  stopped now (< 0.1 m/s) but moves >= 0.5 m within 2 s (e.g. green onset)
+    stopping:         moving > 2 m/s now, but covers < half the constant-speed distance in 2 s
+    cruising:         everything else
+    These situations need motion or timing cues that a single frame does not carry.
+    """
+    speed = np.asarray(speed, dtype=np.float64)
+    final = np.linalg.norm(np.asarray(waypoints)[:, -1], axis=-1)
+    horizon = 2.0
+    out = np.full(len(speed), "cruising", dtype=object)
+    stopped = speed < 0.1
+    out[stopped & (final < 0.5)] = "holding"
+    out[stopped & (final >= 0.5)] = "start_from_rest"
+    out[(speed > 2.0) & (final < 0.5 * speed * horizon)] = "stopping"
+    return out

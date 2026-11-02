@@ -179,9 +179,97 @@ def charts(report_path: Path, run_glob: str) -> None:
     print("wrote charts to", ASSETS)
 
 
+def phase5(summary_path: Path) -> None:
+    import json
+
+    from driveaware.data.labels import SITUATIONS
+    from driveaware.viz.charts import ablation_line, closed_loop_bars, grouped_bars
+
+    sm = json.loads(Path(summary_path).read_text())
+    cl = sm["closed_loop"]
+    e = cl["Expert"]
+    agents = {
+        "Expert": {
+            "completion": [e["route_completion"]],
+            "collision": [e["collision_episode_rate"]],
+            "red_light": [e["per_km"]["red_light"]],
+        }
+    }
+    for g in ("Model A", "Model B (H=1)", "Model B"):
+        agents[g] = {
+            "completion": cl[g]["route_completion"],
+            "collision": cl[g]["collision_episode_rate"],
+            "red_light": cl[g]["per_km"]["red_light"],
+        }
+    closed_loop_bars(
+        agents,
+        ASSETS / "closed_loop_phase5.png",
+        title=f"Closed-loop driving on test_id ({sm['num_scenarios']} routes, paired)",
+        caption="bars: mean over 3 training seeds · dots: individual seeds · "
+        "Model B = frozen model-A encoder + GRU over 4 frames; "
+        "B (H=1) = same head, no history",
+        panels=(
+            ("completion", "Route completion (%)", 100.0),
+            ("collision", "Episodes with a collision (%)", 100.0),
+            ("red_light", "Red-light violations per km", 1.0),
+        ),
+    )
+    ol = sm["open_loop_test"]
+    names = {
+        "start_from_rest": "start from rest",
+        "stopping": "stopping",
+        "holding": "holding",
+        "cruising": "cruising",
+    }
+    order = [s for s in ("start_from_rest", "stopping", "cruising", "holding") if s in SITUATIONS]
+    series, errors = {}, {}
+    for g in ("Model A", "Model B (H=1)", "Model B"):
+        vals = [np.asarray(ol[g][f"ade_{s}"], dtype=float) for s in order]
+        series[g] = [float(v.mean()) for v in vals]
+        errors[g] = [float(v.std(ddof=1)) for v in vals]
+    counts = ", ".join(f"{names[s]} n={ol['Model A'][f'n_{s}'][0]}" for s in order)
+    grouped_bars(
+        [names[s] for s in order],
+        series,
+        ASSETS / "situations_phase5.png",
+        "Open-loop ADE by motion situation (test_id)",
+        "ADE (m)",
+        caption=f"mean ± sd over 3 seeds · {counts}",
+        errors=errors,
+    )
+    ab = sm["val_ablation"]
+    hs = [
+        ("model_b_h1_seed0", 1),
+        ("ablate_b_h2_seed0", 2),
+        ("model_b_h4_seed0", 4),
+        ("ablate_b_h8_seed0", 8),
+    ]
+    xs = [h for k, h in hs if k in ab]
+    ys = [ab[k]["best_val"]["ade"] for k, _ in hs if k in ab]
+    notes = []
+    for key, label in (
+        ("model_a_seed0", "model A"),
+        ("ablate_b_h4_speedhist_seed0", "H=4 + speed history"),
+        ("ablate_b_e2e_seed0", "H=4 end-to-end"),
+    ):
+        if key in ab:
+            notes.append((label, ab[key]["best_val"]["ade"]))
+    ablation_line(
+        xs,
+        ys,
+        ASSETS / "history_ablation.png",
+        "History length, frozen encoder (val ADE, seed 0)",
+        "frames of history (H)",
+        "ADE (m)",
+        notes=notes,
+    )
+    print("wrote phase-5 charts to", ASSETS)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("what", choices=["sim", "rollout", "charts"])
+    parser.add_argument("what", choices=["sim", "rollout", "charts", "phase5"])
+    parser.add_argument("--summary")
     parser.add_argument("--report")
     parser.add_argument("--runs", default="experiments/*_model_a_seed*")
     parser.add_argument("--checkpoint")
@@ -203,6 +291,8 @@ def main() -> None:
         save_png(label_montage(REPO_ROOT / "data/expert_v1/train"), "label_montage.png")
     elif args.what == "charts":
         charts(Path(args.report), args.runs)
+    elif args.what == "phase5":
+        phase5(Path(args.summary))
     else:
         from driveaware.evaluation.closed_loop import scenario_set
 

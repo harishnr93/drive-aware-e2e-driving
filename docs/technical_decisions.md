@@ -41,6 +41,11 @@ Format: decision, alternatives considered, rationale. Status values: **accepted*
 | D34 | Target speed from predicted waypoints: \|w₂ − w₀\| / 0.4 s; same pure-pursuit + PID controller as the expert | separate speed head; PID on the first waypoint | Planned in D11. An oracle with privileged waypoints completes 30/30 val routes through this exact rule, so the pipeline is sound | accepted |
 | D35 | Closed-loop test scenarios: test_id maps (3000–3009) with routes/traffic derived independently of the dataset (`scenario_set`), identical for all agents | new maps | Keeps the map-level split; routes are new; paired comparison across agents | accepted |
 | D36 | Image normalisation statistics are computed from 2,000 train frames and stored as model buffers | fixed constants | Travels with the checkpoint; no train/test leakage | accepted |
+| D37 | Model B uses model A's encoder, frozen, with per-frame features cached once per split | end-to-end training of CNN + GRU | Hardware rule 8. Training takes about 1 min instead of about 90 min per seed. The end-to-end variant is run as an ablation (one seed) to test whether freezing is the bottleneck | accepted (Phase 5) |
+| D38 | Add a **B(H=1)** control with the same frozen features and head recipe but no history | compare B with A only | A and B differ in more than history (training recipe, no jitter, extra layers). Only B vs B(H=1) isolates the temporal effect, and the result showed this was necessary | accepted |
+| D39 | Primary model B gets image history + **current** speed only; speed history is an ablation | feed per-frame speeds to the GRU | Past ego motion invites the inertia/copycat shortcut. The ablation's open-loop gain came from cruising frames, consistent with that | accepted |
+| D40 | Open-loop analysis by motion situation (holding, start from rest, stopping, cruising) | aggregate ADE only | Targets the cases where a single frame lacks timing/motion information (Phase 5 task 5) | accepted |
+| D41 | Incremental temporal inference: encode only the newest frame, keep a feature buffer | re-encode all H frames per step | Same output (tested), constant per-step encoder cost | accepted |
 
 ## Rejected or deferred ideas
 

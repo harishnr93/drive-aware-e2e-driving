@@ -130,3 +130,21 @@ def test_dataloader_batches(dataset_root):
     batch = next(iter(torch.utils.data.DataLoader(ds, batch_size=4, num_workers=2, shuffle=True)))
     assert batch["image"].shape == (4, 2, 96, 160, 3)
     assert batch["command"].dtype == torch.long
+
+
+def test_open_loop_uses_checkpoint_history(dataset_root, tmp_path):
+    """Regression: temporal checkpoints must be evaluated with their own history length."""
+    from driveaware.evaluation.open_loop import evaluate_checkpoint
+    from driveaware.models.temporal.gru_policy import TemporalPolicy
+    from driveaware.training.bc import TrainConfig, evaluate_open_loop
+
+    torch.manual_seed(0)
+    cfg = TrainConfig(model="temporal", history=3, history_stride=2)
+    model = TemporalPolicy(cfg.temporal).eval()
+    torch.save({"config": cfg, "state_dict": model.state_dict(), "epoch": 0}, tmp_path / "b.pt")
+    got = evaluate_checkpoint(tmp_path / "b.pt", dataset_root / "val", device="cpu")
+    ds = DrivingDataset(dataset_root / "val", history=3, history_stride=2)
+    want = evaluate_open_loop(
+        model, torch.utils.data.DataLoader(ds, batch_size=32), torch.device("cpu")
+    )
+    assert got["ade"] == pytest.approx(want["ade"], rel=1e-5)

@@ -224,7 +224,7 @@ Known limitations:
 | Encoder | 5 stride-2 conv blocks (32-64-96-128-192 ch, BN, ReLU) → global avg pool → 256-d | 1.07 M params (measured) |
 | Measurement fusion | speed (normalised) + one-hot command → MLP(64), concatenated with image feature | small |
 | A: trajectory head | MLP 320→256→20 (10×(x, y)); L1 loss on waypoints | ~0.1 M |
-| B: temporal | shared encoder per frame → GRU(256) over H frames → same head | +0.4 M |
+| B: temporal | model A's encoder, frozen (features cached) → GRU(256) over H = 4 frames → head with [current speed, command]; ablations H ∈ {1, 2, 4, 8}, stride 2, speed history, end-to-end | 1.55 M (0.48 M trainable) |
 | C: introspection | MLP on [detached GRU state, speed, command, uncertainty features] → logit; weighted BCE or focal loss; temperature scaling on a calibration split | ~0.05 M |
 | Uncertainty | (i) heteroscedastic Laplace head (aleatoric); (ii) ensemble of M = 5 models (epistemic). MC dropout as a cheap comparison | ×M at inference |
 | Ablation | ImageNet-pretrained ResNet-18 encoder | 11 M |
