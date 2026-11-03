@@ -362,3 +362,260 @@ information as input." **Met.**
 - **Labels:** strictly future.
 - **Evaluation:** AUROC, PR-AUC, Brier, ECE, reliability, lead time and false alarms, against
   four heuristics plus a privileged reference, with 3 seeds and episode-level CIs.
+
+## Phase 7 — Trajectory uncertainty
+
+Summary file: [`docs/results/phase7_uncertainty.json`](results/phase7_uncertainty.json)
+(run `20261102-183652_uncertainty`, `scripts/run_uncertainty.py`).
+
+### Design (fixed before results)
+
+| Item | Value |
+|---|---|
+| Aleatoric | Model B with a probabilistic head: mean + Laplace scale b per waypoint coordinate, trained with Laplace NLL (variance 2b²) |
+| Epistemic | Deep ensemble, M = 5 probabilistic GRU heads per encoder seed (15 in total), each on model A seed k's **frozen** encoder |
+| Baseline | MC dropout on deterministic model B (20 passes, dropout p = 0.1 in the head) |
+| Combined | Ensemble + Laplace: total variance = mean aleatoric + variance of member means |
+| Uncertainty summary | Mean over waypoints of √(var_x + var_y) (m). High error = ADE above the 90th percentile of the ensemble's clean val ADE (0.39–0.41 m) |
+| Calibration | One σ-scale per method, fitted on clean val so that 68.3% of coordinates satisfy \|e\| ≤ s·σ |
+| Shift preview | test_id images with Gaussian noise (σ = 20), 9-px motion blur, or a 25% black occlusion; seeded, same frames for every method. The full suite is Phase 9 |
+| Failure link | Uncertainty recomputed offline on the recorded Phase 6 rollouts. Histories are rebuilt from the recorded features and reproduce B's recorded predictions to ≤ 0.6 mm (float16 rounding). Each signal is used alone (logistic + Platt) and as extra input to the introspection head |
+
+Ensemble members reach val ADE 0.155–0.161, the same as deterministic B (0.154–0.160), so
+NLL training costs no accuracy.
+
+### Open loop, clean test_id (mean ± sd, 3 seeds)
+
+| Method | ADE (m) | Mean σ raw (m) | Spearman ρ(σ, error) | AUROC (high error) | AUSE ↓ | σ-scale (val) | 1σ / 2σ coverage after scaling |
+|---|---|---|---|---|---|---|---|
+| MC dropout | 0.167 | 0.138 | 0.46 ± 0.01 | 0.61 ± 0.01 | 0.385 | ×1.27–1.64 | 0.66 / 0.82 |
+| Laplace head | 0.162 | 0.230 | 0.57 ± 0.03 | 0.70 ± 0.02 | 0.291 | ×0.43–0.45 | 0.67 / 0.82 |
+| Ensemble | **0.160** | 0.022 | 0.57 ± 0.05 | 0.69 ± 0.05 | 0.301 | ×3.9–4.2 | 0.68 / 0.83 |
+| Ensemble + Laplace | **0.160** | 0.232 | 0.57 ± 0.04 | 0.70 ± 0.01 | 0.299 | ×0.42 | 0.68 / 0.82 |
+
+Deterministic model B: ADE 0.163 ± 0.004.
+
+- **Raw scales are badly off in opposite directions.** The ensemble is about 4× over-confident;
+  its 1σ covers 33% of residuals. The Laplace head is about 2× too wide (1σ covers 85%). A single
+  scale on val fixes 1σ coverage on test (0.66–0.68).
+- **2σ coverage stays at about 0.82 instead of 0.95.** Errors are heavy-tailed, so a Gaussian
+  interval calibrated at 1σ is too narrow in the tails. Because of the same tails, the
+  scale that fixes 1σ coverage *raises* the Gaussian NLL for the Laplace-based methods
+  (−1.14 → +1.51). One scalar cannot calibrate both the centre and the tails.
+
+![Uncertainty vs error](assets/uncertainty_vs_error_light.png)
+![Sparsification](assets/uncertainty_sparsification_light.png)
+
+### Under image corruptions (preview of Phase 9; mean of 3 seeds)
+
+| Condition | Ensemble-mean ADE | Calibrated σ, Ensemble | Calibrated σ, Laplace | ρ(σ, error), Ensemble + Laplace | 1σ coverage, Ensemble + Laplace |
+|---|---|---|---|---|---|
+| clean | 0.160 | 0.09 | 0.10 | 0.57 | 0.68 |
+| noise | 0.374 (×2.3) | 0.11 | 0.11 | 0.76 | 0.45 |
+| blur | 0.208 (×1.3) | 0.10 | 0.11 | 0.42 | 0.60 |
+| occlusion | 0.674 (×4.2) | 0.16 | 0.13 | 0.45 | 0.30 |
+
+![Corruptions](assets/uncertainty_corruptions_light.png)
+
+**Uncertainty under-reacts to distribution shift.** Errors grow 1.3–4.2× while calibrated
+uncertainty grows only 1.0–1.8×, so interval coverage collapses (to 0.30 under occlusion).
+*Within* a shifted condition, σ still ranks errors (ρ 0.42–0.76). The most likely cause is that
+every ensemble member shares the frozen encoder: corrupted images are mapped to features on
+which the heads agree. This is a central limitation for Phase 9.
+
+### Uncertainty as a failure predictor (test_id rollouts of model B; 3 seeds)
+
+| Predictor | AUROC | PR-AUC |
+|---|---|---|
+| Ensemble disagreement (epistemic) | 0.662 ± 0.029 | 0.160 ± 0.042 |
+| Laplace scale (aleatoric) | 0.521 ± 0.011 | 0.084 ± 0.005 |
+| MC dropout variance | 0.630 ± 0.021 | 0.107 ± 0.004 |
+| All three uncertainty signals | 0.741 ± 0.036 | 0.216 ± 0.054 |
+| Introspection (C), retrained here | 0.971 ± 0.003 | 0.796 ± 0.012 |
+| Introspection + uncertainty inputs | 0.970 ± 0.003 | 0.796 ± 0.001 |
+
+Adding uncertainty to the introspection head changes AUROC by −0.004 [−0.007, 0.001],
+−0.003 [−0.004, −0.001] and +0.004 [0.000, 0.007] for the three seeds. That is no consistent
+gain. PR-AUC CIs all include 0.
+
+![Failure link](assets/uncertainty_failure_link_light.png)
+
+### Cost (batch 1, p50; encoder on the newest frame + temporal heads)
+
+| | GPU | CPU (1 thread) |
+|---|---|---|
+| Deterministic B | 3.1–3.5 ms | 6.1 ms |
+| Laplace head | 3.2–3.5 ms | 6.0–6.1 ms |
+| Ensemble, 5 heads (shared encoder) | 6.8–7.1 ms | 8.8–9.4 ms |
+| MC dropout, 20 passes | 21.6–24.0 ms | 19.3–28.9 ms |
+
+(One outlier: deterministic B on GPU for seed 1 measured 7.0 ms, likely a transient.)
+
+### Findings
+
+1. **RQ4 (trajectory part).** Uncertainty from the Laplace head or the head ensemble ranks
+   prediction errors moderately well (ρ ≈ 0.57, AUROC ≈ 0.70). MC dropout is weaker. Raw scales
+   are wrong by 2–4×, and a single val-fitted scale fixes central coverage but not the tails.
+2. **Ensembling gives a small accuracy gain** (ADE 0.160 vs 0.163) for about 2× head latency. The
+   encoder is shared, so the overhead stays small.
+3. **Epistemic uncertainty does not track distribution shift here.** It rises far less than the
+   error under image corruptions, so intervals become badly over-confident. With a frozen
+   shared encoder, "ensemble disagreement" mostly measures head disagreement, not unfamiliar
+   input.
+4. **Failure probability and trajectory uncertainty are different quantities.** Uncertainty
+   signals predict failures poorly (best AUROC 0.74 combined), and they add nothing on top of the
+   introspection head. The uncertainty GIF shows this directly: in the run-up to a collision,
+   ensemble disagreement stays flat while P(failure) rises to 0.94. Introspection captures
+   *what the policy is about to do* in a risky context. Trajectory uncertainty captures *how
+   precisely the next 2 s can be predicted*, and those diverge.
+
+### Assessment against the Phase 7 acceptance criterion
+
+"Uncertainty estimates are evaluated quantitatively and their limitations are documented."
+**Met.**
+- **Evaluated:** ranking quality, sparsification, NLL, coverage before and after calibration,
+  shift sensitivity, failure-prediction value and latency, for 3 methods plus the combination
+  over 3 seeds.
+- **Limitations documented:** shared encoder, heavy tails, and under-reaction to shift.
+
+## Benchmark v2 — the same pipeline on realistic junctions and signals
+
+Pre-registration: [`docs/benchmark_v2.md`](benchmark_v2.md), decision D52. v2 changes only
+map rendering and kerb geometry:
+- chamfered junctions instead of 29 m discs;
+- guide markings through junctions;
+- larger signal heads plus near-side heads.
+
+The same seeds, splits, models, training recipes and analysis scripts were re-run
+(`scripts/run_v2_pipeline.sh`). v1 results above are unchanged.
+
+**Gate (passed).** The expert completes 99/100 routes on maps 200–209 with zero infractions,
+identical to v1. The expert dataset `expert_v2` has exactly the same episodes, poses and
+labels as `expert_v1`; only the images differ (all sampled frames). The comparison therefore
+isolates the effect of what the camera sees.
+
+![v1 vs v2](assets/benchmark_v1_v2.png)
+
+### Driving (test_id, 150 paired routes; mean ± sd over 3 seeds)
+
+Summary file: [`docs/results/phase5_temporal_v2.json`](results/phase5_temporal_v2.json).
+
+| | v1 completion | **v2 completion** | v2 success | v2 collision episodes | v2 off-road / km (v1) | v2 route deviation / km (v1) | v2 red light / km (v1) | Failures in junctions, v1 → v2 |
+|---|---|---|---|---|---|---|---|---|
+| Expert | 1.000 | **1.000** | 0.993 | 0.00 | 0 (0) | 0 (0) | 0 (0) | — |
+| Model A | 0.431 ± 0.002 | **0.409 ± 0.035** | 0.096 | 0.182 | 4.00 (2.08) | 1.71 (2.97) | 3.24 (3.53) | 77% → 83% |
+| Model B (H=1) | 0.473 ± 0.016 | **0.411 ± 0.031** | 0.089 | 0.193 | 3.92 (1.92) | 1.71 (2.24) | 3.54 (3.68) | 76% → 85% |
+| Model B (H=4) | 0.463 ± 0.026 | **0.388 ± 0.034** | 0.064 | 0.193 | 4.61 (1.93) | 1.61 (2.43) | 3.62 (3.75) | 79% → 84% |
+
+Open-loop test ADE is unchanged (0.163 for all three; v1 0.162–0.163). Val ADE is
+0.150–0.157, marginally lower than v1.
+
+Paired differences on v2 (pooled over seeds, 95% bootstrap CI):
+- B(H=4) − B(H=1) route completion −0.024 [−0.042, −0.006];
+- B(H=1) − A +0.002 [−0.015, 0.019];
+- B(H=4) − A −0.022 [−0.042, −0.002].
+
+### What changed and why
+
+1. **The policies did not become more competent.** Route completion is slightly *lower* on v2
+   (−0.02 to −0.08), even though open-loop error is identical and the expert is unaffected.
+2. **Failure modes moved, they did not disappear.** For model B (all seeds), terminal outcomes
+   went from 125 off-road / 158 route deviations (v1) to 248 off-road / 86 route deviations
+   (v2). The policy still drifts inside junctions. On v1's wide disc the drift usually ended
+   as a route deviation while still on asphalt; v2's kerbs end it sooner as an off-road
+   event.
+3. **Right turns became the main failure point.** Junction failures ending on a right-turn
+   connector rose from 84–97 to 135–139 per model. The chamfered kerb leaves little room
+   inside the right-turn path. The expert follows the path exactly and never touches it,
+   but the learned policies cut the corner slightly.
+4. **The visual aids helped only marginally.** Collision episodes fell (about 0.21–0.24 →
+   0.18–0.19) and red-light violations per km dropped slightly (3.5–3.8 → 3.2–3.6). The
+   guide lines did not stop junction drift.
+5. **The temporal model is now slightly worse than its control** (−0.024 [−0.042, −0.006]),
+   consistent with H1 not being supported on either benchmark.
+
+**Assessment.** The pre-registered changes made the benchmark *stricter* (realistic kerbs
+penalise corner cutting) but did not make behaviour cloning more competent. The dominant
+problem is compounding error in junctions, not the absence of visual cues. As registered,
+this is reported as a negative result. The remedy listed as the fallback in the
+pre-registration, DAgger, addresses compounding error directly.
+
+### Failure prediction on v2 (Phase 6 pipeline, unchanged)
+
+Summary file: [`docs/results/phase6_introspection_v2.json`](results/phase6_introspection_v2.json).
+For all three seeds, the v2 test rollouts reproduce the v2 closed-loop episodes exactly
+(maximum completion difference 0.0; checked post hoc, see the note in the summary). The test
+data covers 38–46k decision steps per seed, positive rate 8.8–10.9%, and 203–210 failure
+events in 140–147 of 150 episodes. Off-road is now the most common event (71–90 per seed),
+then red light (64–66).
+
+| Predictor (v2, mean ± sd, 3 seeds) | AUROC | PR-AUC | ECE | Events detected | Median lead | False alarms / km |
+|---|---|---|---|---|---|---|
+| **Introspection (C)** | **0.973 ± 0.006** | **0.815 ± 0.033** | 0.014 | 99.2% | 2.3 s | 20.2 |
+| All heuristics | 0.821 ± 0.022 | 0.327 ± 0.027 | 0.035 | 62.7% | 2.6 s | 14.9 |
+| Context (speed + command) | 0.771 ± 0.010 | 0.210 ± 0.024 | 0.059 | 49.2% | 3.8 s | 7.9 |
+| Novelty | 0.727 ± 0.044 | 0.198 ± 0.041 | 0.031 | 60.1% | 0.7 s | 15.8 |
+| Oracle (privileged) | 0.857 ± 0.009 | 0.353 ± 0.066 | 0.045 | 69.2% | 1.6 s | 9.4 |
+| *v1 introspection, for comparison* | *0.971 ± 0.003* | *0.796 ± 0.012* | *0.011* | *98.7%* | *2.1 s* | *19.2* |
+
+- **H2 on v2:** ΔAUROC (C − all heuristics) is +0.173 [0.149, 0.195], +0.148 [0.127, 0.167] and
+  +0.133 [0.114, 0.152]. ΔPR-AUC is +0.511, +0.515 and +0.435, all CIs above 0.
+- **Anticipation stratum** (positives 1–2 s ahead, car still within 1 m of its lane centre;
+  35% of positives): introspection AUROC 0.972 / PR-AUC 0.582, vs heuristics 0.752 / 0.087 and
+  oracle 0.805 / 0.108.
+- **By failure type (AUROC):** collision 0.880, red light 0.945, off-road 0.959, route
+  deviation 0.933. The privileged oracle is slightly better on route deviation only (0.955).
+- **Calibration:** raw ECE is 0.038–0.060, and 0.014 after Platt scaling.
+- **Ablations:** AUROC 0.981 at a 1 s horizon, 0.962 at 3 s, and 0.976 with lane departure
+  counted as a failure.
+
+**The introspection result replicates on a benchmark with different failure modes.**
+Off-road now dominates where route deviations did before, yet AUROC, PR-AUC, calibration and
+the anticipation analysis are within seed noise of v1. This is the most robust finding so far.
+The caveat from v1 still applies: the policy fails in 93–98% of episodes, so its failures
+remain systematic and predictable.
+
+### Trajectory uncertainty on v2 (Phase 7 pipeline, unchanged)
+
+Summary file: [`docs/results/phase7_uncertainty_v2.json`](results/phase7_uncertainty_v2.json).
+The 15 ensemble members reach val ADE 0.154 on average (v1 0.158). Rollout reconstruction is
+≤ 0.6 mm.
+
+| Ensemble + Laplace (mean of 3 seeds) | v1 ADE | v2 ADE | v1 ρ(σ, error) | v2 ρ | v1 1σ coverage | v2 1σ coverage |
+|---|---|---|---|---|---|---|
+| clean | 0.160 | 0.162 | 0.57 | 0.51 | 0.68 | 0.68 |
+| noise | 0.374 | 0.285 | 0.76 | 0.67 | 0.45 | 0.49 |
+| blur | 0.208 | 0.186 | 0.42 | 0.45 | 0.60 | 0.62 |
+| occlusion | 0.674 | 0.591 | 0.45 | 0.53 | 0.30 | 0.32 |
+
+- **Shift sensitivity is unchanged.** Under occlusion the error grows ×3.6 while calibrated σ
+  grows ×2.0 (ensemble) and ×1.2 (Laplace), so coverage collapses as on v1. v2 images are
+  somewhat more robust to noise and occlusion (lower ADE), plausibly because the guide lines
+  and kerbs give more redundant cues.
+- **Failure prediction from uncertainty** (AUROC): ensemble disagreement 0.726, Laplace scale
+  0.531, MC dropout 0.555, all signals combined 0.768. Introspection reaches 0.973.
+- **Added to introspection:** ΔAUROC of +0.003 [0.001, 0.005], −0.001 [−0.002, 0.001] and
+  +0.001 [−0.001, 0.003]. No practically relevant gain, as on v1.
+
+### Conclusion of the v1 → v2 comparison
+
+Comparison file: [`docs/results/benchmark_v1_v2.json`](results/benchmark_v1_v2.json).
+
+![v1 vs v2 results](assets/benchmark_v1_v2_results_light.png)
+
+| Claim | v1 | v2 | Status |
+|---|---|---|---|
+| Expert solves the task | 99.3% routes, 0 infractions | same | robust |
+| BC policies drive competently (RQ1) | completion 0.43–0.47 | 0.39–0.41 | **not achieved on either** |
+| Temporal context helps (H1) | −0.010 [−0.026, 0.006] | −0.024 [−0.042, −0.006] | **not supported on either** |
+| Introspection beats heuristics (H2) | ΔAUROC +0.12 to +0.17 | +0.13 to +0.17 | **supported on both** |
+| Calibrated failure probabilities (RQ4) | ECE 0.011 | 0.014 | supported on both |
+| Trajectory uncertainty ≠ failure risk | adds ±0.004 | adds ≤ +0.003 | robust |
+| Uncertainty under-reacts to image shift | coverage 0.30 under occlusion | 0.32 | robust |
+
+The redesign did not achieve what it was meant to: a more competent policy before Phase 8.
+Behaviour cloning still fails inside junctions on both benchmarks; v2's kerbs only change
+how those failures register (off-road instead of route deviation, mostly on right turns). The
+introspection and uncertainty findings, by contrast, hold on both benchmarks. Phase 8 can run
+on v2 (gate passed), but the policy-competence problem is unchanged. The pre-registered
+fallback, DAgger, targets it directly.

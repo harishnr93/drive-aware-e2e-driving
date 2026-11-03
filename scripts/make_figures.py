@@ -266,14 +266,23 @@ def phase5(summary_path: Path) -> None:
     print("wrote phase-5 charts to", ASSETS)
 
 
+EVAL_CONFIG = REPO_ROOT / "configs/evaluation/closed_loop.yaml"
+
+
 def _intro_scenarios(name: str):
     from driveaware.evaluation.closed_loop import scenario_set
+    from driveaware.sim.lightweight.scenario import BENCHMARKS
 
-    cfg = __import__("yaml").safe_load(
-        (REPO_ROOT / "configs/evaluation/closed_loop.yaml").read_text()
-    )
+    cfg = __import__("yaml").safe_load(Path(EVAL_CONFIG).read_text())
     sc = cfg["sets"][name]
-    base = ScenarioSpec(0, 0, 0, route_length=cfg["route_length"], max_duration=cfg["max_duration"])
+    base = ScenarioSpec(
+        0,
+        0,
+        0,
+        route_length=cfg["route_length"],
+        max_duration=cfg["max_duration"],
+        map=BENCHMARKS[cfg.get("benchmark", "v1")],
+    )
     maps = list(range(sc["map_seed_start"], sc["map_seed_start"] + sc["num_maps"]))
     return scenario_set(name, maps, sc["routes_per_map"], base, cfg["seed"])
 
@@ -513,10 +522,346 @@ def warning_gif(
     print("wrote", ASSETS / name, "episode", pick, "outcome", outcome, "frames", len(images))
 
 
+def phase7(run_dir: Path) -> None:
+    import json
+
+    from driveaware.viz.charts import closed_loop_bars, grouped_bars, line_family
+
+    res = json.loads((run_dir / "results.json").read_text())
+    seeds = sorted(res, key=int)
+    r0 = res[seeds[0]]
+    methods = ("MC dropout", "Laplace head", "Ensemble", "Ensemble + Laplace")
+    clean = r0["open_loop"]["clean"]
+    line_family(
+        {
+            m: (
+                np.array(clean[m]["_curves"]["binned"]["uncertainty"]),
+                np.array(clean[m]["_curves"]["binned"]["error"]),
+            )
+            for m in methods
+        },
+        ASSETS / "uncertainty_vs_error.png",
+        "Does predicted uncertainty track the actual error? (test_id, seed 0)",
+        "predicted uncertainty, mean positional std (m)",
+        "actual ADE (m)",
+        caption="10 equal-count bins per method; raw (uncalibrated) std",
+    )
+    sp = {
+        m: (
+            np.array(clean[m]["_curves"]["sparsification"]["fractions"]),
+            np.array(clean[m]["_curves"]["sparsification"]["method"]),
+        )
+        for m in methods
+    }
+    oracle = clean["Ensemble"]["_curves"]["sparsification"]
+    line_family(
+        sp,
+        ASSETS / "uncertainty_sparsification.png",
+        "Sparsification: drop the most uncertain predictions first",
+        "fraction of predictions removed",
+        "remaining ADE / full ADE",
+        reference=(
+            "oracle (remove by true error)",
+            np.array(oracle["fractions"]),
+            np.array(oracle["oracle"]),
+        ),
+        caption="lower is better; AUSE = area between a curve and the oracle",
+        markers=False,
+    )
+    conds = ["clean", "noise", "blur", "occlusion"]
+    series = {
+        "Prediction error (ADE)": [
+            np.mean([res[s]["open_loop"][c]["Ensemble"]["ade"] for s in seeds]) for c in conds
+        ],
+        "Ensemble": [
+            np.mean(
+                [
+                    res[s]["open_loop"][c]["Ensemble"]["mean_uncertainty_m"]
+                    * res[s]["sigma_scales_val"]["Ensemble"]  # calibrated on clean val
+                    for s in seeds
+                ]
+            )
+            for c in conds
+        ],
+        "Laplace head": [
+            np.mean(
+                [
+                    res[s]["open_loop"][c]["Laplace head"]["mean_uncertainty_m"]
+                    * res[s]["sigma_scales_val"]["Laplace head"]  # calibrated on clean val
+                    for s in seeds
+                ]
+            )
+            for c in conds
+        ],
+    }
+    grouped_bars(
+        conds,
+        series,
+        ASSETS / "uncertainty_corruptions.png",
+        "Error and uncertainty under image corruptions (test_id)",
+        "metres",
+        caption="3 seeds · noise σ=20, blur 9 px, 25% occlusion · "
+        "std calibrated on clean val (Ensemble: epistemic, Laplace: aleatoric)",
+    )
+    names = {
+        "Introspection (C)": "Introspection (C)",
+        "Introspection + uncertainty": "Introspection + uncertainty",
+        "Ensemble disagreement (epistemic)": "Ensemble disagreement",
+        "Laplace scale (aleatoric)": "Laplace scale",
+        "MC dropout variance": "MC dropout",
+    }
+    agents = {
+        lab: {
+            "auroc": [res[s]["failure"][k]["auroc"] for s in seeds],
+            "pr_auc": [res[s]["failure"][k]["pr_auc"] for s in seeds],
+        }
+        for k, lab in names.items()
+    }
+    closed_loop_bars(
+        agents,
+        ASSETS / "uncertainty_failure_link.png",
+        title="Predicting failure within 2 s from uncertainty (test_id rollouts)",
+        caption="bars: mean over 3 policy seeds · dots: seeds · all predictors "
+        "Platt-calibrated on intro_cal",
+        panels=(("auroc", "AUROC", 1.0), ("pr_auc", "PR-AUC", 1.0)),
+    )
+    print("wrote phase-7 charts to", ASSETS)
+
+
+def uncertainty_gif(
+    unc_run: Path, intro_run: Path, seed: int, outcome: str, name: str, seconds: float, stride: int
+) -> None:
+    """Rollout with ensemble trajectories, 2-sigma ellipses, and epistemic vs failure timelines."""
+    import json
+
+    import torch
+
+    from driveaware.core.frames import ego_to_world
+    from driveaware.core.types import EventType
+    from driveaware.evaluation.closed_loop import AgentSpec, run_episode
+    from driveaware.models.uncertainty.ensemble import EnsemblePredictor, TrajectoryUncertainty
+    from driveaware.training.bc import load_policy
+
+    res_u = json.loads((unc_run / f"results_seed{seed}.json").read_text())
+    policy = res_u["policy_run"]
+    files = sorted((REPO_ROOT / "data/introspection" / policy / "test_id").glob("ep_*.npz"))
+    pick = next(
+        i for i, f in enumerate(files) if EventType(int(np.load(f)["outcome"])).name == outcome
+    )
+    ep = dict(np.load(files[pick]))
+    members = []
+    for m in range(5):
+        run = sorted(REPO_ROOT.glob(f"experiments/*_model_bprob_e{m}_k{seed}_seed{10 * seed + m}"))
+        members.append(load_policy(run[-1] / "best.pt", "cpu")[0])
+    ens = EnsemblePredictor(members, "cpu")
+    feats = torch.from_numpy(ep["feature"].astype(np.float32))
+    n = len(feats)
+    idx = np.maximum(np.arange(n)[:, None] - np.arange(3, -1, -1)[None], 0)
+    speed = torch.from_numpy(ep["speed"].astype(np.float32))
+    pred = ens.predict(feats[idx], speed[idx], torch.from_numpy(ep["command"].astype(np.int64)))
+    scale = res_u["sigma_scales_val"]["Ensemble + Laplace"]
+    total_sd = np.sqrt(pred.total_var) * scale  # calibrated per-coordinate std
+    epi = TrajectoryUncertainty.summary(pred.epistemic_var)
+    z = np.load(intro_run / f"test_predictions_seed{seed}.npz")
+    p_fail = z[f"p_head_{pick}"]
+    ts = ep["timestamp"]
+    fail_t = [
+        t
+        for t, ty in zip(ep["event_time"], ep["event_type"], strict=True)
+        if EventType(int(ty)).name
+        in ("COLLISION", "OFF_ROAD", "ROUTE_DEVIATION", "RED_LIGHT", "STALL")
+    ]
+    spec = _intro_scenarios("test_id")[pick]
+    row = run_episode(
+        spec, AgentSpec("policy", str(REPO_ROOT / "experiments" / policy / "best.pt")), record=True
+    )
+    sim = LightweightDrivingSim()
+    sim.reset(spec)
+    td = TopDownRenderer(sim.episode.road_map)
+    cam = sim.episode.renderer
+    member_cols = [(150, 220, 210), (110, 200, 190), (80, 180, 170), (60, 160, 150), (40, 140, 130)]
+    start = max(0, n - int(seconds * 10))
+    epi_max = max(float(epi[start:].max()), 1e-3)
+    images = []
+    theta = np.linspace(0, 2 * np.pi, 20)
+    for k in list(range(start, n, stride)) + [n]:
+        kk = min(k, n - 1)
+        res, _ = row["frames"][min(k, len(row["frames"]) - 1)]
+        frame = compose_frame(res, td)
+        pose = res.privileged.ego_pose
+        ppm = frame.shape[0] / 80.0  # top-down: 80 m across the square panel
+        x_off = frame.shape[1] - frame.shape[0]
+
+        def top(xy, pose=pose, ppm=ppm, x_off=x_off):
+            w = ego_to_world(xy, pose)
+            u = x_off + (w[:, 0] - pose.x + 40.0) * ppm
+            v = (40.0 - (w[:, 1] - pose.y)) * ppm
+            return np.column_stack([u, v]).astype(np.int32)
+
+        if k < n:
+            for j, mm in enumerate(pred.member_means[:, kk]):
+                uv, front = cam.project_ego(mm)
+                pts = (uv[front] * 3).astype(np.int32)
+                if len(pts) > 1:
+                    cv2.polylines(frame, [pts], False, member_cols[j], 1, cv2.LINE_AA)
+                cv2.polylines(frame, [top(mm)], False, member_cols[j], 1, cv2.LINE_AA)
+            for w_i in (3, 6, 9):  # 2-sigma ellipses at 0.8 s, 1.4 s, 2.0 s
+                c = pred.mean[kk, w_i]
+                sd = 2.0 * total_sd[kk, w_i]
+                ring = np.column_stack([c[0] + sd[0] * np.cos(theta), c[1] + sd[1] * np.sin(theta)])
+                uv, front = cam.project_ego(ring)
+                if front.all():
+                    cv2.polylines(
+                        frame, [(uv * 3).astype(np.int32)], True, (255, 240, 120), 1, cv2.LINE_AA
+                    )
+                cv2.polylines(frame, [top(ring)], True, (255, 240, 120), 1, cv2.LINE_AA)
+        h, w = frame.shape[:2]
+        strip_h = 120
+        strip = np.full((strip_h, w, 3), 26, np.uint8)
+        t_now = ts[kk] if k < n else max([ts[-1]] + fail_t)
+        win = 10.0
+        x0, x1 = 40, w - 160
+        rows = (
+            (
+                8,
+                52,
+                epi,
+                epi_max,
+                (27, 175, 122),
+                "epistemic std (ensemble disagreement)",
+                f"{epi[kk]:.2f} m",
+            ),
+            (62, 106, p_fail, 1.0, (232, 123, 164), "P(failure within 2 s)", f"{p_fail[kk]:.2f}"),
+        )
+        for y0, y1, series, vmax, col, label, txt in rows:
+            cv2.rectangle(strip, (x0, y0), (x1, y1), (60, 60, 58), 1)
+            sel = (ts > t_now - win) & (ts <= t_now)
+            xs = x0 + (ts[sel] - (t_now - win)) / win * (x1 - x0)
+            ys = y1 - np.clip(series[sel] / vmax, 0, 1) * (y1 - y0)
+            pts = np.column_stack([xs, ys]).astype(np.int32)
+            if len(pts) > 1:
+                cv2.polylines(strip, [pts], False, col, 2, cv2.LINE_AA)
+            cv2.putText(
+                strip,
+                label,
+                (x0 + 4, y0 + 13),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.38,
+                (190, 190, 190),
+                1,
+                cv2.LINE_AA,
+            )
+            cv2.putText(
+                strip,
+                txt,
+                (x1 + 10, y1 - 12),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                (240, 240, 240),
+                1,
+                cv2.LINE_AA,
+            )
+            for tf in fail_t:
+                if t_now - win < tf <= t_now + 0.15:
+                    xf = int(x0 + (tf - (t_now - win)) / win * (x1 - x0))
+                    cv2.line(strip, (xf, y0), (xf, y1), (227, 73, 72), 2)
+        full = np.vstack([frame, strip])
+        small = cv2.resize(full, None, fx=0.62, fy=0.62, interpolation=cv2.INTER_AREA)
+        images.append(Image.fromarray(small).quantize(colors=64, method=Image.Quantize.MEDIANCUT))
+    images[0].save(
+        ASSETS / name,
+        save_all=True,
+        append_images=images[1:],
+        duration=int(100 * stride),
+        loop=0,
+        optimize=True,
+    )
+    print("wrote", ASSETS / name, "episode", pick, "frames", len(images))
+
+
+def benchmark_comparison() -> None:
+    """v1 vs v2: junction and bend from above, and the policy camera in a turn / at a red light."""
+    from driveaware.core.types import Command
+    from driveaware.sim.lightweight.roadmap import generate_map
+    from driveaware.sim.lightweight.scenario import BENCHMARKS
+
+    def label(img, text):
+        img = img.copy()
+        cv2.rectangle(img, (0, 0), (img.shape[1], 22), (26, 26, 26), -1)
+        cv2.putText(
+            img, text, (6, 16), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (240, 240, 240), 1, cv2.LINE_AA
+        )
+        return img
+
+    tops, cams = [], []
+    for v in ("v1", "v2"):
+        m = generate_map(205, BENCHMARKS[v])
+        deg = [m.node_degree(n) for n in range(len(m.nodes))]
+        crops = []
+        for n in (deg.index(4) if 4 in deg else deg.index(3), deg.index(2)):
+            r, c = m.world_to_pixel(m.nodes[n])
+            crops.append(
+                cv2.resize(
+                    m.color[r - 280 : r + 280, c - 280 : c + 280][::-1],
+                    (288, 288),
+                    interpolation=cv2.INTER_AREA,
+                )
+            )
+        tops.append(label(np.hstack(crops), f"{v}: junction and bend (top-down)"))
+        sim = LightweightDrivingSim()
+        res = sim.reset(ScenarioSpec(205, 6, 6, map=BENCHMARKS[v]))
+        expert = RuleBasedExpert()
+        found: dict[str, np.ndarray] = {}
+        while not res.done and len(found) < 2:
+            o, nxt = res.observation, res.privileged.extra["next_stop"]
+            big = cv2.resize(o.image, (480, 288), interpolation=cv2.INTER_NEAREST)
+            if (
+                "turn" not in found
+                and o.command == Command.LEFT
+                and abs(res.privileged.ego_steer) > 0.15
+            ):
+                found["turn"] = big
+            if (
+                "red" not in found
+                and o.speed < 0.05
+                and nxt
+                and nxt["state"].name == "RED"
+                and nxt["s"] - res.privileged.route_progress < 9
+            ):
+                found["red"] = big
+            res = sim.step(expert(res))
+        cams.append(
+            label(
+                np.hstack([found["turn"], found["red"]]),
+                f"{v}: policy camera, left turn | waiting at red",
+            )
+        )
+    top = np.vstack(tops)
+    cam = np.vstack(cams)
+    top = cv2.resize(top, (int(top.shape[1] * cam.shape[0] / top.shape[0]), cam.shape[0]))
+    save_png(np.hstack([top, cam]), "benchmark_v1_v2.png")
+
+
 def main() -> None:
+    global EVAL_CONFIG
     parser = argparse.ArgumentParser()
-    parser.add_argument("what", choices=["sim", "rollout", "charts", "phase5", "phase6", "warning"])
+    parser.add_argument(
+        "what",
+        choices=[
+            "sim",
+            "rollout",
+            "charts",
+            "phase5",
+            "phase6",
+            "warning",
+            "phase7",
+            "uncertainty",
+            "benchmark",
+        ],
+    )
     parser.add_argument("--run-dir")
+    parser.add_argument("--eval-config", default=str(EVAL_CONFIG))
+    parser.add_argument("--intro-run")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--outcome", default="COLLISION")
     parser.add_argument("--seconds", type=float, default=12.0)
@@ -531,6 +876,7 @@ def main() -> None:
     parser.add_argument("--frames", type=int, default=120)
     parser.add_argument("--stride", type=int, default=3)
     args = parser.parse_args()
+    EVAL_CONFIG = Path(args.eval_config)
     if args.what == "sim":
         spec = ScenarioSpec(205, 3, 3)  # map outside all dataset/evaluation splits
         save_png(map_overview(spec), "map_overview.png")
@@ -546,15 +892,29 @@ def main() -> None:
         phase5(Path(args.summary))
     elif args.what == "phase6":
         phase6(Path(args.run_dir))
+    elif args.what == "benchmark":
+        benchmark_comparison()
+    elif args.what == "phase7":
+        phase7(Path(args.run_dir))
+    elif args.what == "uncertainty":
+        uncertainty_gif(
+            Path(args.run_dir),
+            Path(args.intro_run),
+            args.seed,
+            args.outcome,
+            args.name,
+            args.seconds,
+            args.stride,
+        )
     elif args.what == "warning":
         warning_gif(
             Path(args.run_dir), args.seed, args.outcome, args.name, args.seconds, args.stride
         )
     else:
-        from driveaware.evaluation.closed_loop import scenario_set
-
-        base = ScenarioSpec(0, 0, 0, route_length=300.0, max_duration=150.0)
-        spec = scenario_set("test_id", [args.map_seed], 5, base)[args.route_seed]
+        # The k-th route on the given test map, from the configured benchmark's test set.
+        spec = [x for x in _intro_scenarios("test_id") if x.map_seed == args.map_seed][
+            args.route_seed
+        ]
         rollout_gif(args.checkpoint, spec, args.name, args.frames, args.stride, args.history)
 
 

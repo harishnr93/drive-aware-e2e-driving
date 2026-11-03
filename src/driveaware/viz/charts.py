@@ -65,7 +65,27 @@ ENTITY_SLOT = {
     "All heuristics": 5,
     "Context heuristic": 6,
     "Oracle (privileged)": 7,
+    # Phase 7 uncertainty family (separate chart family; legends always shown)
+    "Ensemble": 2,
+    "Ensemble disagreement": 2,
+    "MC dropout": 3,
+    "Laplace head": 6,
+    "Laplace scale": 6,
+    "Ensemble + Laplace": 0,
+    "Introspection + uncertainty": 5,
+    "Prediction error (ADE)": 7,
 }
+
+
+def _wrap(label: str, width: int = 13) -> str:
+    """Wrap tick labels on spaces; parenthesised qualifiers go on their own line."""
+    import textwrap
+
+    head, sep, tail = label.partition(" (")
+    lines = textwrap.wrap(head, width) or [head]
+    if sep:
+        lines.append("(" + tail)
+    return "\n".join(lines)
 
 
 def entity_color(t: dict, label: str, fallback: int) -> str:
@@ -202,9 +222,7 @@ def closed_loop_bars(
                     fontsize=9,
                     color=t["ink"],
                 )
-            ax.set_xticks(
-                range(len(labels)), [lb.replace(" (", "\n(") for lb in labels], fontsize=8
-            )
+            ax.set_xticks(range(len(labels)), [_wrap(lb) for lb in labels], fontsize=8)
             peak = max(scale * max(agents[lb][key]) for lb in labels)
             if key == "completion" or (scale == 100.0 and peak > 60):
                 top_lim = 112.0
@@ -475,5 +493,108 @@ def histogram(
         if caption:
             fig.text(0.02, 0.01, caption, color=t["muted"], fontsize=7)
         fig.tight_layout(rect=(0, 0.05 if caption else 0, 1, 1))
+        fig.savefig(out.with_name(f"{out.stem}_{mode}.png"), facecolor=t["surface"])
+        plt.close(fig)
+
+
+def line_family(
+    series: dict[str, tuple[np.ndarray, np.ndarray]],
+    out: Path,
+    title: str,
+    xlabel: str,
+    ylabel: str,
+    reference: tuple[str, np.ndarray, np.ndarray] | None = None,
+    caption: str = "",
+    markers: bool = True,
+) -> None:
+    """Several x/y series (entity colours) with an optional dashed reference series."""
+    for mode, t in THEMES.items():
+        fig, (ax,) = _figure(t, 1, 5.6, 3.6)
+        if reference is not None:
+            name, rx, ry = reference
+            ax.plot(rx, ry, color=t["muted"], linewidth=1.5, linestyle=(0, (4, 3)), label=name)
+        for k, (name, (x, y)) in enumerate(series.items()):
+            ax.plot(
+                x,
+                y,
+                color=entity_color(t, name, k),
+                linewidth=2,
+                label=name,
+                marker="o" if markers else None,
+                markersize=5,
+                markeredgecolor=t["surface"],
+                markeredgewidth=1.2,
+            )
+        ax.set_xlabel(xlabel, color=t["ink2"], fontsize=9)
+        ax.set_ylabel(ylabel, color=t["ink2"], fontsize=9)
+        ax.set_title(title, color=t["ink"], fontsize=10, loc="left")
+        ax.legend(frameon=False, fontsize=7, labelcolor=t["ink2"])
+        if caption:
+            fig.text(0.02, 0.01, caption, color=t["muted"], fontsize=7)
+        fig.tight_layout(rect=(0, 0.05 if caption else 0, 1, 1))
+        fig.savefig(out.with_name(f"{out.stem}_{mode}.png"), facecolor=t["surface"])
+        plt.close(fig)
+
+
+def version_bars(
+    panels: list[tuple[str, str]],
+    models: list[str],
+    values: dict[str, dict[str, dict[str, list[float]]]],
+    out: Path,
+    title: str,
+    caption: str = "",
+) -> None:
+    """Small multiples: one panel per metric, groups = models, two bars per group (v1, v2).
+
+    values[version][model][metric] -> per-seed list. v1 is drawn in muted grey (the reference),
+    v2 in the first categorical slot; dots are individual seeds.
+    """
+    versions = ("v1", "v2")
+    for mode, t in THEMES.items():
+        fig, axes = _figure(t, len(panels), 3.3 * len(panels), 3.5)
+        colours = {"v1": t["muted"], "v2": t["series"][0]}
+        for ax, (metric, label) in zip(axes, panels, strict=True):
+            peak = 0.0
+            for i, model in enumerate(models):
+                for j, v in enumerate(versions):
+                    vals = np.asarray(values[v][model][metric], dtype=float)
+                    x = i + (j - 0.5) * 0.38
+                    mean = float(vals.mean())
+                    ax.bar(
+                        x,
+                        mean,
+                        width=0.36,
+                        color=colours[v],
+                        edgecolor=t["surface"],
+                        linewidth=1.5,
+                        label=v if i == 0 else None,
+                    )
+                    if len(vals) > 1:
+                        ax.plot(
+                            x + np.linspace(-0.07, 0.07, len(vals)),
+                            vals,
+                            "o",
+                            color=t["ink"],
+                            markersize=3,
+                            alpha=0.8,
+                        )
+                    ax.annotate(
+                        f"{mean:.1f}" if mean >= 10 else f"{mean:.2f}",
+                        (x, max(mean, float(vals.max()))),
+                        xytext=(0, 3),
+                        textcoords="offset points",
+                        ha="center",
+                        fontsize=7,
+                        color=t["ink2"],
+                    )
+                    peak = max(peak, float(vals.max()))
+            ax.set_xticks(range(len(models)), [_wrap(m, 9) for m in models], fontsize=8)
+            ax.set_ylim(0, 1.2 * peak if peak > 0 else 1.0)
+            ax.set_title(label, color=t["ink"], fontsize=10, loc="left")
+        axes[0].legend(frameon=False, fontsize=8, labelcolor=t["ink2"], loc="upper left")
+        fig.suptitle(title, color=t["ink"], fontsize=11, x=0.02, ha="left")
+        if caption:
+            fig.text(0.02, 0.01, caption, color=t["muted"], fontsize=7)
+        fig.tight_layout(rect=(0, 0.04 if caption else 0, 1, 0.94))
         fig.savefig(out.with_name(f"{out.stem}_{mode}.png"), facecolor=t["surface"])
         plt.close(fig)

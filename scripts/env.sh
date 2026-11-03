@@ -6,7 +6,7 @@
 _DA_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 unset PYTHONPATH AMENT_PREFIX_PATH COLCON_PREFIX_PATH
 if [ -n "${LD_LIBRARY_PATH:-}" ]; then
-    LD_LIBRARY_PATH="$(echo "$LD_LIBRARY_PATH" | tr ':' '\n' | grep -v 'ros2_humble\|/opt/ros' | paste -sd: -)"
+    LD_LIBRARY_PATH="$(echo "$LD_LIBRARY_PATH" | tr ':' '\n' | { grep -v 'ros2_humble\|/opt/ros' || true; } | paste -sd: -)"
     export LD_LIBRARY_PATH
 fi
 # shellcheck disable=SC1091

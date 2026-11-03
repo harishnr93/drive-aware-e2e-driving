@@ -34,6 +34,11 @@ from driveaware.training.bc import (
 log = get_logger("training.temporal")
 
 
+def laplace_nll(mean: torch.Tensor, scale: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    """Mean negative log-likelihood of independent Laplace distributions (per coordinate)."""
+    return (torch.abs(target - mean) / scale + torch.log(2 * scale)).mean()
+
+
 @torch.no_grad()
 def cache_features(
     encoder_checkpoint: str | Path, split_dir: str | Path, device: torch.device, batch: int = 512
@@ -162,7 +167,11 @@ def train_temporal(cfg: TrainConfig, run_dir: Path) -> dict:
         for k in range(steps_per_epoch):
             g = train.indices[pick[k * batch_size : (k + 1) * batch_size]]
             feats, speed, cmd, wp = train.gather(g, cfg.history, cfg.history_stride)
-            loss = nn.functional.l1_loss(model.forward_features(feats, speed, cmd), wp)
+            if cfg.temporal.probabilistic:
+                mean, scale = model.forward_dist(feats, speed, cmd)
+                loss = laplace_nll(mean, scale, wp)
+            else:
+                loss = nn.functional.l1_loss(model.forward_features(feats, speed, cmd), wp)
             opt.zero_grad(set_to_none=True)
             loss.backward()
             nn.utils.clip_grad_norm_(trainable, cfg.grad_clip)

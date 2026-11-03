@@ -1,0 +1,1271 @@
+{
+ "source_run": "20261103-123352_introspection_v2",
+ "label": "failure (collision, off-road, route deviation, red light, stall) in (t, t+2 s]",
+ "alarm_threshold_rule": "frame-level FPR 10% on intro_cal",
+ "seeds": [
+  "0",
+  "1",
+  "2"
+ ],
+ "data": {
+  "0": {
+   "intro_train": {
+    "episodes": 160,
+    "steps": 47455,
+    "positive_rate": 0.09440522600358234,
+    "failure_events": 224,
+    "failure_events_by_type": {
+     "COLLISION": 35,
+     "OFF_ROAD": 93,
+     "ROUTE_DEVIATION": 24,
+     "RED_LIGHT": 72,
+     "STALL": 0
+    },
+    "episodes_with_failure": 156
+   },
+   "intro_val": {
+    "episodes": 40,
+    "steps": 13607,
+    "positive_rate": 0.07496141691776291,
+    "failure_events": 51,
+    "failure_events_by_type": {
+     "COLLISION": 6,
+     "OFF_ROAD": 26,
+     "ROUTE_DEVIATION": 3,
+     "RED_LIGHT": 16,
+     "STALL": 0
+    },
+    "episodes_with_failure": 38
+   },
+   "intro_cal": {
+    "episodes": 60,
+    "steps": 14786,
+    "positive_rate": 0.12985256323549305,
+    "failure_events": 98,
+    "failure_events_by_type": {
+     "COLLISION": 9,
+     "OFF_ROAD": 38,
+     "ROUTE_DEVIATION": 14,
+     "RED_LIGHT": 37,
+     "STALL": 0
+    },
+    "episodes_with_failure": 60
+   },
+   "test_id": {
+    "episodes": 150,
+    "steps": 42990,
+    "positive_rate": 0.09578971853919516,
+    "failure_events": 206,
+    "failure_events_by_type": {
+     "COLLISION": 28,
+     "OFF_ROAD": 90,
+     "ROUTE_DEVIATION": 24,
+     "RED_LIGHT": 64,
+     "STALL": 0
+    },
+    "episodes_with_failure": 144
+   }
+  },
+  "1": {
+   "intro_train": {
+    "episodes": 160,
+    "steps": 44135,
+    "positive_rate": 0.11102299762093576,
+    "failure_events": 246,
+    "failure_events_by_type": {
+     "COLLISION": 25,
+     "OFF_ROAD": 92,
+     "ROUTE_DEVIATION": 38,
+     "RED_LIGHT": 91,
+     "STALL": 0
+    },
+    "episodes_with_failure": 156
+   },
+   "intro_val": {
+    "episodes": 40,
+    "steps": 10811,
+    "positive_rate": 0.10359818703172695,
+    "failure_events": 56,
+    "failure_events_by_type": {
+     "COLLISION": 4,
+     "OFF_ROAD": 23,
+     "ROUTE_DEVIATION": 10,
+     "RED_LIGHT": 19,
+     "STALL": 0
+    },
+    "episodes_with_failure": 38
+   },
+   "intro_cal": {
+    "episodes": 60,
+    "steps": 13900,
+    "positive_rate": 0.12654676258992806,
+    "failure_events": 89,
+    "failure_events_by_type": {
+     "COLLISION": 10,
+     "OFF_ROAD": 31,
+     "ROUTE_DEVIATION": 17,
+     "RED_LIGHT": 31,
+     "STALL": 0
+    },
+    "episodes_with_failure": 58
+   },
+   "test_id": {
+    "episodes": 150,
+    "steps": 38410,
+    "positive_rate": 0.10874772194740953,
+    "failure_events": 210,
+    "failure_events_by_type": {
+     "COLLISION": 28,
+     "OFF_ROAD": 87,
+     "ROUTE_DEVIATION": 29,
+     "RED_LIGHT": 66,
+     "STALL": 0
+    },
+    "episodes_with_failure": 147
+   }
+  },
+  "2": {
+   "intro_train": {
+    "episodes": 160,
+    "steps": 51777,
+    "positive_rate": 0.08884253626127431,
+    "failure_events": 230,
+    "failure_events_by_type": {
+     "COLLISION": 25,
+     "OFF_ROAD": 73,
+     "ROUTE_DEVIATION": 48,
+     "RED_LIGHT": 84,
+     "STALL": 0
+    },
+    "episodes_with_failure": 152
+   },
+   "intro_val": {
+    "episodes": 40,
+    "steps": 13299,
+    "positive_rate": 0.08120911346717799,
+    "failure_events": 54,
+    "failure_events_by_type": {
+     "COLLISION": 5,
+     "OFF_ROAD": 21,
+     "ROUTE_DEVIATION": 8,
+     "RED_LIGHT": 20,
+     "STALL": 0
+    },
+    "episodes_with_failure": 37
+   },
+   "intro_cal": {
+    "episodes": 60,
+    "steps": 15310,
+    "positive_rate": 0.116263879817113,
+    "failure_events": 89,
+    "failure_events_by_type": {
+     "COLLISION": 11,
+     "OFF_ROAD": 28,
+     "ROUTE_DEVIATION": 17,
+     "RED_LIGHT": 33,
+     "STALL": 0
+    },
+    "episodes_with_failure": 58
+   },
+   "test_id": {
+    "episodes": 150,
+    "steps": 46151,
+    "positive_rate": 0.08747372754653204,
+    "failure_events": 203,
+    "failure_events_by_type": {
+     "COLLISION": 31,
+     "OFF_ROAD": 71,
+     "ROUTE_DEVIATION": 35,
+     "RED_LIGHT": 66,
+     "STALL": 0
+    },
+    "episodes_with_failure": 140
+   }
+  }
+ },
+ "reproduces_phase5": {
+  "0": 0.0,
+  "1": 0.0,
+  "2": 0.0
+ },
+ "predictors": {
+  "introspection (C)": {
+   "auroc": [
+    0.9690741451426588,
+    0.9797608861930222,
+    0.9700382999732411
+   ],
+   "pr_auc": [
+    0.8085595817316202,
+    0.8502168363924604,
+    0.7857341530710567
+   ],
+   "brier": [
+    0.037164826465706034,
+    0.03296216440417502,
+    0.0354308847783746
+   ],
+   "ece": [
+    0.015500273014985258,
+    0.014178693372770907,
+    0.013727153020903911
+   ],
+   "prevalence": [
+    0.09578971853919516,
+    0.10874772194740953,
+    0.08747372754653204
+   ],
+   "detection_rate": [
+    0.9854368932038835,
+    0.9952380952380953,
+    0.9950738916256158
+   ],
+   "lead_time_median_s": [
+    2.400000000000034,
+    2.400000000000034,
+    2.2000000000000313
+   ],
+   "false_alarms_per_km": [
+    21.7277128597581,
+    19.680999997351574,
+    19.305029413000774
+   ],
+   "events": [
+    206,
+    210,
+    203
+   ],
+   "threshold": [
+    0.1679599777271717,
+    0.13796277966977924,
+    0.1714298702351546
+   ],
+   "auroc_ci95": [
+    [
+     0.9595951198674042,
+     0.9762469191700958
+    ],
+    [
+     0.9741824729303632,
+     0.9848200291721009
+    ],
+    [
+     0.962735037272953,
+     0.9761856605760799
+    ]
+   ],
+   "pr_auc_ci95": [
+    [
+     0.7717963547361812,
+     0.8452776899519597
+    ],
+    [
+     0.8050160477267221,
+     0.8901558502629293
+    ],
+    [
+     0.7469368681438905,
+     0.8234529241053867
+    ]
+   ],
+   "uncalibrated_ece": [
+    0.05951765291182124,
+    0.03767869869065196,
+    0.0567847316677696
+   ],
+   "uncalibrated_brier": [
+    0.0570799588855547,
+    0.04027180475444178,
+    0.05452836933288916
+   ]
+  },
+  "speed": {
+   "auroc": [
+    0.5319867863603047,
+    0.4759697239077742,
+    0.5360155878257193
+   ],
+   "pr_auc": [
+    0.09177661264488238,
+    0.09341360241497162,
+    0.08429536102287939
+   ],
+   "brier": [
+    0.0877963005091393,
+    0.09725533335922332,
+    0.08053943221554923
+   ],
+   "ece": [
+    0.056062991969585425,
+    0.056969856215749584,
+    0.04994496485788042
+   ],
+   "prevalence": [
+    0.09578971853919516,
+    0.10874772194740953,
+    0.08747372754653204
+   ],
+   "detection_rate": [
+    0.014563106796116505,
+    0.014285714285714285,
+    0.034482758620689655
+   ],
+   "lead_time_median_s": [
+    6.500000000000092,
+    1.1999999999999318,
+    4.90000000000007
+   ],
+   "false_alarms_per_km": [
+    5.503589537036352,
+    11.549329339763197,
+    10.58015897699523
+   ],
+   "events": [
+    206,
+    210,
+    203
+   ],
+   "threshold": [
+    0.14162726713641796,
+    0.12915954894586854,
+    0.1405658114248044
+   ]
+  },
+  "context (speed + command)": {
+   "auroc": [
+    0.7597543933434759,
+    0.7794947454159098,
+    0.773678149082802
+   ],
+   "pr_auc": [
+    0.20666240588185428,
+    0.23458493505026667,
+    0.18768866068733925
+   ],
+   "brier": [
+    0.08393421198894044,
+    0.08995450646890446,
+    0.07496320641149995
+   ],
+   "ece": [
+    0.07217096596769093,
+    0.06844321436748163,
+    0.03697611938416454
+   ],
+   "prevalence": [
+    0.09578971853919516,
+    0.10874772194740953,
+    0.08747372754653204
+   ],
+   "detection_rate": [
+    0.5388349514563107,
+    0.5095238095238095,
+    0.42857142857142855
+   ],
+   "lead_time_median_s": [
+    4.100000000000058,
+    3.3999999999998067,
+    4.000000000000054
+   ],
+   "false_alarms_per_km": [
+    8.31271336323199,
+    8.426296406051721,
+    7.020010695636645
+   ],
+   "events": [
+    206,
+    210,
+    203
+   ],
+   "threshold": [
+    0.25465654882426536,
+    0.2684954476057832,
+    0.25355934143157444
+   ]
+  },
+  "novelty": {
+   "auroc": [
+    0.6823521784452697,
+    0.72967630933422,
+    0.7697608267092109
+   ],
+   "pr_auc": [
+    0.15214799559707462,
+    0.2302361828676143,
+    0.21270100536652511
+   ],
+   "brier": [
+    0.085645348655091,
+    0.09101163634301918,
+    0.07655535413727553
+   ],
+   "ece": [
+    0.033560679951445085,
+    0.029419061023786306,
+    0.028880985019960448
+   ],
+   "prevalence": [
+    0.09578971853919516,
+    0.10874772194740953,
+    0.08747372754653204
+   ],
+   "detection_rate": [
+    0.3737864077669903,
+    0.7333333333333333,
+    0.6945812807881774
+   ],
+   "lead_time_median_s": [
+    0.5000000000000071,
+    0.6999999999999851,
+    0.8000000000000114
+   ],
+   "false_alarms_per_km": [
+    9.860597920523464,
+    15.791940117635393,
+    21.661747289393077
+   ],
+   "events": [
+    206,
+    210,
+    203
+   ],
+   "threshold": [
+    0.22519006011925521,
+    0.2566247468915691,
+    0.24767719154426646
+   ]
+  },
+  "inconsistency": {
+   "auroc": [
+    0.7069722412938504,
+    0.7032117792445762,
+    0.7040632331114801
+   ],
+   "pr_auc": [
+    0.1720551969245942,
+    0.1851498985588447,
+    0.1567608659982336
+   ],
+   "brier": [
+    0.08647011157338087,
+    0.09640423561913568,
+    0.07973493238101725
+   ],
+   "ece": [
+    0.05186537733100468,
+    0.06062834276295241,
+    0.04630760418756645
+   ],
+   "prevalence": [
+    0.09578971853919516,
+    0.10874772194740953,
+    0.08747372754653204
+   ],
+   "detection_rate": [
+    0.529126213592233,
+    0.5142857142857142,
+    0.541871921182266
+   ],
+   "lead_time_median_s": [
+    0.5999999999999659,
+    0.70000000000001,
+    0.6000000000000085
+   ],
+   "false_alarms_per_km": [
+    41.391579643127564,
+    39.656625743166494,
+    42.52120764214197
+   ],
+   "events": [
+    206,
+    210,
+    203
+   ],
+   "threshold": [
+    0.17679029665559376,
+    0.1667405788393087,
+    0.15631649330627542
+   ]
+  },
+  "all heuristics": {
+   "auroc": [
+    0.7956340199652543,
+    0.8316140566959622,
+    0.8368772722290791
+   ],
+   "pr_auc": [
+    0.2972702520103879,
+    0.3347227138393926,
+    0.3504078885147272
+   ],
+   "brier": [
+    0.07791742988156418,
+    0.08389381323279455,
+    0.06963475053257571
+   ],
+   "ece": [
+    0.039694595126916976,
+    0.029290990554260106,
+    0.03476811646837952
+   ],
+   "prevalence": [
+    0.09578971853919516,
+    0.10874772194740953,
+    0.08747372754653204
+   ],
+   "detection_rate": [
+    0.49029126213592233,
+    0.6761904761904762,
+    0.7142857142857143
+   ],
+   "lead_time_median_s": [
+    2.900000000000041,
+    1.7000000000000242,
+    3.100000000000044
+   ],
+   "false_alarms_per_km": [
+    13.414999496526109,
+    13.788485028084635,
+    17.600169672631875
+   ],
+   "events": [
+    206,
+    210,
+    203
+   ],
+   "threshold": [
+    0.2646457103220207,
+    0.3005727493410735,
+    0.2541556710679592
+   ],
+   "auroc_ci95": [
+    [
+     0.771733482528468,
+     0.8213643525751948
+    ],
+    [
+     0.8117718451743254,
+     0.8529465599126537
+    ],
+    [
+     0.8157665904334463,
+     0.8578530608296914
+    ]
+   ],
+   "pr_auc_ci95": [
+    [
+     0.2524134919682189,
+     0.3506740459320674
+    ],
+    [
+     0.2863999339419575,
+     0.3860549812480364
+    ],
+    [
+     0.30661543940083014,
+     0.39279967125596105
+    ]
+   ]
+  },
+  "oracle (privileged)": {
+   "auroc": [
+    0.8584503656338468,
+    0.865029313229053,
+    0.8473328624785957
+   ],
+   "pr_auc": [
+    0.32394734473792713,
+    0.42764378131740244,
+    0.306068650501428
+   ],
+   "brier": [
+    0.07602238490995636,
+    0.079444725835184,
+    0.07144255990278221
+   ],
+   "ece": [
+    0.059508530154882874,
+    0.03845982769430605,
+    0.03669822250264637
+   ],
+   "prevalence": [
+    0.09578971853919516,
+    0.10874772194740953,
+    0.08747372754653204
+   ],
+   "detection_rate": [
+    0.587378640776699,
+    0.8142857142857143,
+    0.6748768472906403
+   ],
+   "lead_time_median_s": [
+    1.200000000000017,
+    1.5000000000000213,
+    2.0000000000000284
+   ],
+   "false_alarms_per_km": [
+    7.051474094327826,
+    11.37255389068519,
+    9.72772910681078
+   ],
+   "events": [
+    206,
+    210,
+    203
+   ],
+   "threshold": [
+    0.24048230527209458,
+    0.2264777203258057,
+    0.2111934394460777
+   ]
+  }
+ },
+ "h2": {
+  "0": {
+   "auroc difference (C - all heuristics)": {
+    "mean": 0.17344012517740448,
+    "ci95": [
+     0.148673307288452,
+     0.19541127966024835
+    ]
+   },
+   "pr_auc difference (C - all heuristics)": {
+    "mean": 0.5112893297212323,
+    "ci95": [
+     0.46073834980942563,
+     0.5590205424962844
+    ]
+   }
+  },
+  "1": {
+   "auroc difference (C - all heuristics)": {
+    "mean": 0.14814682949705993,
+    "ci95": [
+     0.1266267030745997,
+     0.1666748202552988
+    ]
+   },
+   "pr_auc difference (C - all heuristics)": {
+    "mean": 0.5154941225530678,
+    "ci95": [
+     0.45387428501261684,
+     0.568388020471592
+    ]
+   }
+  },
+  "2": {
+   "auroc difference (C - all heuristics)": {
+    "mean": 0.13316102774416194,
+    "ci95": [
+     0.1140250829273272,
+     0.15242104495791184
+    ]
+   },
+   "pr_auc difference (C - all heuristics)": {
+    "mean": 0.43532626455632945,
+    "ci95": [
+     0.38834417254074927,
+     0.4805273894603583
+    ]
+   }
+  }
+ },
+ "best_heuristic": {
+  "0": "all heuristics",
+  "1": "all heuristics",
+  "2": "all heuristics"
+ },
+ "ablations": {
+  "0": {
+   "horizon 1 s": {
+    "prevalence": 0.04791812049313794,
+    "auroc": 0.9786161668394299,
+    "pr_auc": 0.7577227997672105,
+    "context_auroc": 0.7353335673740865,
+    "context_pr_auc": 0.09647038522506328
+   },
+   "horizon 3 s": {
+    "prevalence": 0.14328913700860665,
+    "auroc": 0.9617058545581488,
+    "pr_auc": 0.8375186957719458,
+    "context_auroc": 0.7786612806823912,
+    "context_pr_auc": 0.3153465956846142
+   },
+   "incl. lane departure": {
+    "prevalence": 0.14245173296115377,
+    "auroc": 0.9726856072354544,
+    "pr_auc": 0.8631172214218286,
+    "context_auroc": 0.7529811879292537,
+    "context_pr_auc": 0.28241969572458386
+   }
+  },
+  "1": {
+   "horizon 1 s": {
+    "prevalence": 0.05441291330382713,
+    "auroc": 0.9839289186497481,
+    "pr_auc": 0.8085544228842474,
+    "context_auroc": 0.7518745784414982,
+    "context_pr_auc": 0.11154877704398235
+   },
+   "horizon 3 s": {
+    "prevalence": 0.1625878677427753,
+    "auroc": 0.9684606531797799,
+    "pr_auc": 0.8723168031635075,
+    "context_auroc": 0.7967857612687383,
+    "context_pr_auc": 0.3520107737352133
+   },
+   "incl. lane departure": {
+    "prevalence": 0.15917729757875554,
+    "auroc": 0.979765273222204,
+    "pr_auc": 0.8964722900611953,
+    "context_auroc": 0.7779072215065923,
+    "context_pr_auc": 0.30870858526664463
+   }
+  },
+  "2": {
+   "horizon 1 s": {
+    "prevalence": 0.04376936577755628,
+    "auroc": 0.9807224934045374,
+    "pr_auc": 0.7657086049031252,
+    "context_auroc": 0.7495524014797528,
+    "context_pr_auc": 0.0902647427115684
+   },
+   "horizon 3 s": {
+    "prevalence": 0.13078806526402462,
+    "auroc": 0.9567211752956439,
+    "pr_auc": 0.7971680460987152,
+    "context_auroc": 0.793555611364841,
+    "context_pr_auc": 0.2922462097720559
+   },
+   "incl. lane departure": {
+    "prevalence": 0.14311715889146498,
+    "auroc": 0.975662763662038,
+    "pr_auc": 0.8804574814189599,
+    "context_auroc": 0.7492286524727879,
+    "context_pr_auc": 0.2596322125346781
+   }
+  }
+ },
+ "analysis": {
+  "0": {
+   "by_type": {
+    "COLLISION": {
+     "positives": 560,
+     "introspection (C)": {
+      "auroc": 0.8924480657216929,
+      "pr_auc": 0.05577789076654566
+     },
+     "context (speed + command)": {
+      "auroc": 0.7254171997575839,
+      "pr_auc": 0.03784307036807815
+     },
+     "all heuristics": {
+      "auroc": 0.684488106461062,
+      "pr_auc": 0.04143824458674327
+     },
+     "novelty": {
+      "auroc": 0.6238391384128481,
+      "pr_auc": 0.016313430128360635
+     },
+     "oracle (privileged)": {
+      "auroc": 0.8347568263694826,
+      "pr_auc": 0.046024914279018836
+     }
+    },
+    "RED_LIGHT": {
+     "positives": 1280,
+     "introspection (C)": {
+      "auroc": 0.9433706414079357,
+      "pr_auc": 0.26559385376136885
+     },
+     "context (speed + command)": {
+      "auroc": 0.79215133136538,
+      "pr_auc": 0.0683714492030388
+     },
+     "all heuristics": {
+      "auroc": 0.6159802243167106,
+      "pr_auc": 0.03433510163253328
+     },
+     "novelty": {
+      "auroc": 0.504107715475905,
+      "pr_auc": 0.031480210408753526
+     },
+     "oracle (privileged)": {
+      "auroc": 0.7463215693179094,
+      "pr_auc": 0.05503445380007064
+     }
+    },
+    "OFF_ROAD": {
+     "positives": 1800,
+     "introspection (C)": {
+      "auroc": 0.9564118380944674,
+      "pr_auc": 0.5092517530236653
+     },
+     "context (speed + command)": {
+      "auroc": 0.6754829988400637,
+      "pr_auc": 0.06920637192870553
+     },
+     "all heuristics": {
+      "auroc": 0.8820633918696555,
+      "pr_auc": 0.188352678098717
+     },
+     "novelty": {
+      "auroc": 0.7861265814248334,
+      "pr_auc": 0.09440590976879834
+     },
+     "oracle (privileged)": {
+      "auroc": 0.8663898869736452,
+      "pr_auc": 0.17062066765016226
+     }
+    },
+    "ROUTE_DEVIATION": {
+     "positives": 480,
+     "introspection (C)": {
+      "auroc": 0.906329001019368,
+      "pr_auc": 0.06402544207351434
+     },
+     "context (speed + command)": {
+      "auroc": 0.8750601329099036,
+      "pr_auc": 0.05071840187783724
+     },
+     "all heuristics": {
+      "auroc": 0.9144320944091586,
+      "pr_auc": 0.15578640379421008
+     },
+     "novelty": {
+      "auroc": 0.7377107837371599,
+      "pr_auc": 0.019392297949077087
+     },
+     "oracle (privileged)": {
+      "auroc": 0.947802526856426,
+      "pr_auc": 0.1685602881657117
+     }
+    }
+   },
+   "strata": {
+    "all frames": {
+     "frames": 42990,
+     "positives": 4118,
+     "positive_share_of_all_positives": 1.0,
+     "introspection (C)": {
+      "auroc": 0.9690741451426588,
+      "pr_auc": 0.8085595817316202
+     },
+     "context (speed + command)": {
+      "auroc": 0.7597543933434759,
+      "pr_auc": 0.20666240588185428
+     },
+     "all heuristics": {
+      "auroc": 0.7956340199652543,
+      "pr_auc": 0.2972702520103879
+     },
+     "novelty": {
+      "auroc": 0.6823521784452697,
+      "pr_auc": 0.15214799559707462
+     },
+     "oracle (privileged)": {
+      "auroc": 0.8584503656338468,
+      "pr_auc": 0.32394734473792713
+     }
+    },
+    "nominal frames (|lateral| < 1 m)": {
+     "frames": 37554,
+     "positives": 2348,
+     "positive_share_of_all_positives": 0.5701796988829528,
+     "introspection (C)": {
+      "auroc": 0.9728244280608433,
+      "pr_auc": 0.7586361379004413
+     },
+     "context (speed + command)": {
+      "auroc": 0.7401163313691013,
+      "pr_auc": 0.12756519056369017
+     },
+     "all heuristics": {
+      "auroc": 0.7350685224690193,
+      "pr_auc": 0.11822427377199847
+     },
+     "novelty": {
+      "auroc": 0.6118836604531848,
+      "pr_auc": 0.0813213935286495
+     },
+     "oracle (privileged)": {
+      "auroc": 0.8512145018257593,
+      "pr_auc": 0.2132561543776688
+     }
+    },
+    "anticipation: positives 1-2 s ahead vs nominal negatives": {
+     "frames": 36698,
+     "positives": 1492,
+     "positive_share_of_all_positives": 0.3623118018455561,
+     "introspection (C)": {
+      "auroc": 0.9707962815258611,
+      "pr_auc": 0.6388668771560384
+     },
+     "context (speed + command)": {
+      "auroc": 0.7278398595078618,
+      "pr_auc": 0.0845980787931105
+     },
+     "all heuristics": {
+      "auroc": 0.7407705798685607,
+      "pr_auc": 0.08472881643108891
+     },
+     "novelty": {
+      "auroc": 0.5604103934270283,
+      "pr_auc": 0.04501421164209967
+     },
+     "oracle (privileged)": {
+      "auroc": 0.8229830622339386,
+      "pr_auc": 0.12328410934951389
+     }
+    }
+   }
+  },
+  "1": {
+   "by_type": {
+    "COLLISION": {
+     "positives": 560,
+     "introspection (C)": {
+      "auroc": 0.8627386771088885,
+      "pr_auc": 0.04929297721562799
+     },
+     "context (speed + command)": {
+      "auroc": 0.7679735799207398,
+      "pr_auc": 0.04387480028861783
+     },
+     "all heuristics": {
+      "auroc": 0.7495432628797887,
+      "pr_auc": 0.04747855110841137
+     },
+     "novelty": {
+      "auroc": 0.652185884129081,
+      "pr_auc": 0.02364629598959881
+     },
+     "oracle (privileged)": {
+      "auroc": 0.8014548499716928,
+      "pr_auc": 0.03779391005737956
+     }
+    },
+    "RED_LIGHT": {
+     "positives": 1320,
+     "introspection (C)": {
+      "auroc": 0.9486703922481761,
+      "pr_auc": 0.2474256458796109
+     },
+     "context (speed + command)": {
+      "auroc": 0.8113097747493812,
+      "pr_auc": 0.08349885063498054
+     },
+     "all heuristics": {
+      "auroc": 0.6810995163280146,
+      "pr_auc": 0.047752615788751784
+     },
+     "novelty": {
+      "auroc": 0.5732758360090525,
+      "pr_auc": 0.048024751488774796
+     },
+     "oracle (privileged)": {
+      "auroc": 0.7774679934965726,
+      "pr_auc": 0.07049687477157196
+     }
+    },
+    "OFF_ROAD": {
+     "positives": 1740,
+     "introspection (C)": {
+      "auroc": 0.9656891379780521,
+      "pr_auc": 0.5248009662324824
+     },
+     "context (speed + command)": {
+      "auroc": 0.677732870679468,
+      "pr_auc": 0.0718984919378068
+     },
+     "all heuristics": {
+      "auroc": 0.8786650429898223,
+      "pr_auc": 0.18455867310066654
+     },
+     "novelty": {
+      "auroc": 0.8171337401928979,
+      "pr_auc": 0.14510180710803738
+     },
+     "oracle (privileged)": {
+      "auroc": 0.8521317967959026,
+      "pr_auc": 0.21063417570456566
+     }
+    },
+    "ROUTE_DEVIATION": {
+     "positives": 580,
+     "introspection (C)": {
+      "auroc": 0.9395789694367725,
+      "pr_auc": 0.13458129566699661
+     },
+     "context (speed + command)": {
+      "auroc": 0.8553134257613462,
+      "pr_auc": 0.050848252955180695
+     },
+     "all heuristics": {
+      "auroc": 0.9215710939137886,
+      "pr_auc": 0.14070588126698144
+     },
+     "novelty": {
+      "auroc": 0.7790192512784052,
+      "pr_auc": 0.032853113714427055
+     },
+     "oracle (privileged)": {
+      "auroc": 0.9637831678926595,
+      "pr_auc": 0.4021796307350888
+     }
+    }
+   },
+   "strata": {
+    "all frames": {
+     "frames": 38410,
+     "positives": 4177,
+     "positive_share_of_all_positives": 1.0,
+     "introspection (C)": {
+      "auroc": 0.9797608861930222,
+      "pr_auc": 0.8502168363924604
+     },
+     "context (speed + command)": {
+      "auroc": 0.7794947454159098,
+      "pr_auc": 0.23458493505026667
+     },
+     "all heuristics": {
+      "auroc": 0.8316140566959622,
+      "pr_auc": 0.3347227138393926
+     },
+     "novelty": {
+      "auroc": 0.72967630933422,
+      "pr_auc": 0.2302361828676143
+     },
+     "oracle (privileged)": {
+      "auroc": 0.865029313229053,
+      "pr_auc": 0.42764378131740244
+     }
+    },
+    "nominal frames (|lateral| < 1 m)": {
+     "frames": 34041,
+     "positives": 2381,
+     "positive_share_of_all_positives": 0.5700263346899689,
+     "introspection (C)": {
+      "auroc": 0.9795085753370214,
+      "pr_auc": 0.7594090138737429
+     },
+     "context (speed + command)": {
+      "auroc": 0.769836219194757,
+      "pr_auc": 0.15279776411082874
+     },
+     "all heuristics": {
+      "auroc": 0.782997278146667,
+      "pr_auc": 0.1554934203812703
+     },
+     "novelty": {
+      "auroc": 0.6518945786592796,
+      "pr_auc": 0.1172813500021433
+     },
+     "oracle (privileged)": {
+      "auroc": 0.8386169408639622,
+      "pr_auc": 0.21729924787132252
+     }
+    },
+    "anticipation: positives 1-2 s ahead vs nominal negatives": {
+     "frames": 33195,
+     "positives": 1535,
+     "positive_share_of_all_positives": 0.3674886282020589,
+     "introspection (C)": {
+      "auroc": 0.9790855198042722,
+      "pr_auc": 0.628402890315013
+     },
+     "context (speed + command)": {
+      "auroc": 0.7563746936608633,
+      "pr_auc": 0.10307414811009126
+     },
+     "all heuristics": {
+      "auroc": 0.7646447494860911,
+      "pr_auc": 0.10047466511199338
+     },
+     "novelty": {
+      "auroc": 0.5684723888382468,
+      "pr_auc": 0.05650683506110157
+     },
+     "oracle (privileged)": {
+      "auroc": 0.8038523728293905,
+      "pr_auc": 0.12083909416665944
+     }
+    }
+   }
+  },
+  "2": {
+   "by_type": {
+    "COLLISION": {
+     "positives": 620,
+     "introspection (C)": {
+      "auroc": 0.8849945552870394,
+      "pr_auc": 0.06669468087735136
+     },
+     "context (speed + command)": {
+      "auroc": 0.6475548385679802,
+      "pr_auc": 0.026132776883077195
+     },
+     "all heuristics": {
+      "auroc": 0.7094440795742851,
+      "pr_auc": 0.02595635082891841
+     },
+     "novelty": {
+      "auroc": 0.7043672478375244,
+      "pr_auc": 0.023363681484999458
+     },
+     "oracle (privileged)": {
+      "auroc": 0.7825652639357376,
+      "pr_auc": 0.04403271021258802
+     }
+    },
+    "RED_LIGHT": {
+     "positives": 1320,
+     "introspection (C)": {
+      "auroc": 0.943055324609662,
+      "pr_auc": 0.2246407592967875
+     },
+     "context (speed + command)": {
+      "auroc": 0.7709590495754088,
+      "pr_auc": 0.05652941848363873
+     },
+     "all heuristics": {
+      "auroc": 0.7153156500879059,
+      "pr_auc": 0.04790286252226725
+     },
+     "novelty": {
+      "auroc": 0.6703242412751458,
+      "pr_auc": 0.0574596026188986
+     },
+     "oracle (privileged)": {
+      "auroc": 0.7720483931911293,
+      "pr_auc": 0.05746065212785171
+     }
+    },
+    "OFF_ROAD": {
+     "positives": 1420,
+     "introspection (C)": {
+      "auroc": 0.9550938379376436,
+      "pr_auc": 0.38338435863329595
+     },
+     "context (speed + command)": {
+      "auroc": 0.7276692267800539,
+      "pr_auc": 0.0568411369909901
+     },
+     "all heuristics": {
+      "auroc": 0.897275418849643,
+      "pr_auc": 0.22485684559632188
+     },
+     "novelty": {
+      "auroc": 0.8447549687474515,
+      "pr_auc": 0.12880881674132683
+     },
+     "oracle (privileged)": {
+      "auroc": 0.8315037213061742,
+      "pr_auc": 0.1077241021734012
+     }
+    },
+    "ROUTE_DEVIATION": {
+     "positives": 700,
+     "introspection (C)": {
+      "auroc": 0.9535164085655824,
+      "pr_auc": 0.19430493537813276
+     },
+     "context (speed + command)": {
+      "auroc": 0.8855768692815182,
+      "pr_auc": 0.0720811966178708
+     },
+     "all heuristics": {
+      "auroc": 0.9360525149533092,
+      "pr_auc": 0.15966941418482888
+     },
+     "novelty": {
+      "auroc": 0.769936320747304,
+      "pr_auc": 0.029369227043270087
+     },
+     "oracle (privileged)": {
+      "auroc": 0.9526231703215708,
+      "pr_auc": 0.2451211149655907
+     }
+    }
+   },
+   "strata": {
+    "all frames": {
+     "frames": 46151,
+     "positives": 4037,
+     "positive_share_of_all_positives": 1.0,
+     "introspection (C)": {
+      "auroc": 0.9700382999732411,
+      "pr_auc": 0.7857341530710567
+     },
+     "context (speed + command)": {
+      "auroc": 0.773678149082802,
+      "pr_auc": 0.18768866068733925
+     },
+     "all heuristics": {
+      "auroc": 0.8368772722290791,
+      "pr_auc": 0.3504078885147272
+     },
+     "novelty": {
+      "auroc": 0.7697608267092109,
+      "pr_auc": 0.21270100536652511
+     },
+     "oracle (privileged)": {
+      "auroc": 0.8473328624785957,
+      "pr_auc": 0.306068650501428
+     }
+    },
+    "nominal frames (|lateral| < 1 m)": {
+     "frames": 39761,
+     "positives": 2124,
+     "positive_share_of_all_positives": 0.5261332672776814,
+     "introspection (C)": {
+      "auroc": 0.9684219439469525,
+      "pr_auc": 0.6745720950478981
+     },
+     "context (speed + command)": {
+      "auroc": 0.7388015707286479,
+      "pr_auc": 0.09919752954464507
+     },
+     "all heuristics": {
+      "auroc": 0.7833270086679439,
+      "pr_auc": 0.12831943656422537
+     },
+     "novelty": {
+      "auroc": 0.7252993170412154,
+      "pr_auc": 0.1200969796118184
+     },
+     "oracle (privileged)": {
+      "auroc": 0.8241661211392584,
+      "pr_auc": 0.1527556933409561
+     }
+    },
+    "anticipation: positives 1-2 s ahead vs nominal negatives": {
+     "frames": 38951,
+     "positives": 1314,
+     "positive_share_of_all_positives": 0.325489224671786,
+     "introspection (C)": {
+      "auroc": 0.9648244188284392,
+      "pr_auc": 0.4779828144518389
+     },
+     "context (speed + command)": {
+      "auroc": 0.7394622624543378,
+      "pr_auc": 0.06549308349494894
+     },
+     "all heuristics": {
+      "auroc": 0.7511709125249939,
+      "pr_auc": 0.07639429343068382
+     },
+     "novelty": {
+      "auroc": 0.6447685045832963,
+      "pr_auc": 0.05634291298305804
+     },
+     "oracle (privileged)": {
+      "auroc": 0.7876876720578688,
+      "pr_auc": 0.0792529120634972
+     }
+    }
+   }
+  }
+ },
+ "reproduces_phase5_note": "Checked post hoc against experiments/20261103-101001_closed_loop_test_id_v2 (the in-run check looked for *_closed_loop_test_id and missed the _v2 report; pattern fixed)."
+}

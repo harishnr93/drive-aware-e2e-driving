@@ -27,7 +27,7 @@ from driveaware.evaluation.closed_loop import (
     summarize,
 )
 from driveaware.evaluation.open_loop import evaluate_checkpoint, reference_baselines
-from driveaware.sim.lightweight.scenario import ScenarioSpec
+from driveaware.sim.lightweight.scenario import BENCHMARKS, ScenarioSpec
 
 
 @dataclass
@@ -39,6 +39,7 @@ class SetConfig:
 
 @dataclass
 class ClosedLoopConfig:
+    benchmark: str = "v1"  # map preset (scenario.BENCHMARKS)
     route_length: float = 300.0
     max_duration: float = 150.0
     seed: int = 0
@@ -53,14 +54,26 @@ def main() -> None:
     parser.add_argument("--checkpoints", nargs="*", default=[])
     parser.add_argument("--history", type=int, default=1)
     parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument("--resume-dir", default=None, help="interrupted run directory to continue")
     parser.add_argument("--data-root", default=str(REPO_ROOT / "data/expert_v1"))
     args = parser.parse_args()
     cfg = load_config(ClosedLoopConfig, args.config)
     sc = cfg.sets[args.set_name]
-    base = ScenarioSpec(0, 0, 0, route_length=cfg.route_length, max_duration=cfg.max_duration)
+    base = ScenarioSpec(
+        0,
+        0,
+        0,
+        route_length=cfg.route_length,
+        max_duration=cfg.max_duration,
+        map=BENCHMARKS[cfg.benchmark],
+    )
     maps = list(range(sc.map_seed_start, sc.map_seed_start + sc.num_maps))
     scenarios = scenario_set(args.set_name, maps, sc.routes_per_map, base, cfg.seed)
-    run_dir = create_run_dir(f"closed_loop_{args.set_name}", cfg)
+    tag = "" if cfg.benchmark == "v1" else f"_{cfg.benchmark}"
+    if args.resume_dir:  # continue an interrupted run: finished agents are loaded, not re-run
+        run_dir = Path(args.resume_dir)
+    else:
+        run_dir = create_run_dir(f"closed_loop_{args.set_name}{tag}", cfg)
     log = setup_logging(run_dir)
 
     agents: dict[str, AgentSpec] = {}
@@ -73,12 +86,25 @@ def main() -> None:
     rows_by_agent = {}
     for name, spec in agents.items():
         t0 = time.perf_counter()
-        rows = evaluate(scenarios, spec, args.workers)
+        ep_file = run_dir / f"episodes_{name}.json"
+        rows = None
+        if ep_file.exists():
+            try:
+                cached = json.loads(ep_file.read_text())
+                if len(cached) == len(scenarios):
+                    rows = cached
+                    log.info("%s: loaded %d finished episodes from %s", name, len(rows), ep_file)
+            except json.JSONDecodeError:
+                rows = None
+        if rows is None:
+            rows = evaluate(scenarios, spec, args.workers)
+            tmp = ep_file.with_name(ep_file.name + ".tmp")
+            tmp.write_text(json.dumps(rows, indent=1))
+            tmp.replace(ep_file)  # atomic: a crash never leaves a partial episodes file
         rows_by_agent[name] = rows
         summary = summarize(rows)
         summary["wall_seconds"] = time.perf_counter() - t0
         report["agents"][name] = {"spec": spec.__dict__, "closed_loop": summary}
-        (run_dir / f"episodes_{name}.json").write_text(json.dumps(rows, indent=1))
         log.info(
             "%s: %s",
             name,

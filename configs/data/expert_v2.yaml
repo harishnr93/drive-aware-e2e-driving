@@ -1,0 +1,18 @@
+# Expert dataset on benchmark v2 (docs/benchmark_v2.md): identical to expert_v1 except the map preset.
+# Map seeds are disjoint across splits (enforced by validation). Reserved ranges for later
+# phases: 4000-4999 intro_train, 5000-5999 intro_cal, 6000+ OOD suites.
+name: expert_v2
+dataset_seed: 0
+benchmark: v2
+route_length: 300.0
+max_duration: 150.0
+workers: 4
+splits:
+  train:   {map_seed_start: 1000, num_maps: 40, routes_per_map: 3}
+  val:     {map_seed_start: 2000, num_maps: 6,  routes_per_map: 3}
+  test_id: {map_seed_start: 3000, num_maps: 10, routes_per_map: 3}
+noise:
+  episode_prob: 0.5
+  mean_interval: 8.0
+  duration: [0.5, 1.2]
+  steer_offset: [0.15, 0.35]

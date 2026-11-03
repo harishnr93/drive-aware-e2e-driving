@@ -19,7 +19,7 @@ from driveaware.core.logging import setup_logging
 from driveaware.core.run import create_run_dir
 from driveaware.expert.expert import RuleBasedExpert
 from driveaware.sim.lightweight.env import LightweightDrivingSim, SimConfig
-from driveaware.sim.lightweight.scenario import ScenarioSpec
+from driveaware.sim.lightweight.scenario import BENCHMARKS, ScenarioSpec
 
 
 @dataclass
@@ -29,6 +29,7 @@ class EvalConfig:
     routes_per_map: int = 10
     route_length: float = 400.0
     max_duration: float = 180.0
+    benchmark: str = "v1"  # map preset (scenario.BENCHMARKS)
 
 
 def main() -> None:
@@ -38,7 +39,7 @@ def main() -> None:
     cfg = from_dict(
         EvalConfig, {k: yaml.safe_load(v) for k, v in (s.split("=", 1) for s in args.set)}
     )
-    run_dir = create_run_dir("eval_expert", cfg)
+    run_dir = create_run_dir(f"eval_expert_{cfg.benchmark}", cfg)
     log = setup_logging(run_dir)
     sim = LightweightDrivingSim(SimConfig(render=False))
     rows = []
@@ -46,7 +47,12 @@ def main() -> None:
     for m in range(cfg.map_seed_start, cfg.map_seed_start + cfg.num_maps):
         for r in range(cfg.routes_per_map):
             spec = ScenarioSpec(
-                m, r, r, route_length=cfg.route_length, max_duration=cfg.max_duration
+                m,
+                r,
+                r,
+                route_length=cfg.route_length,
+                max_duration=cfg.max_duration,
+                map=BENCHMARKS[cfg.benchmark],
             )
             res = sim.reset(spec)
             expert = RuleBasedExpert()

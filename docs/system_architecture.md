@@ -217,6 +217,20 @@ Known limitations:
 - Pedestrians appear only at crosswalks. Jaywalking is reserved for the OOD suite (Phase 9).
 - Static obstacles are parked cars only. Blocked lanes that require an overtake are not modelled.
 
+### Benchmark v2 (pre-registered, `docs/benchmark_v2.md`)
+
+Map presets live in `sim/lightweight/scenario.py::BENCHMARKS`; v1 is the default and is
+pinned bit-identical by `tests/sim/test_benchmark_v2.py`. v2 differs only in rendering and
+kerb geometry:
+- junction surface = union of incident roads + 45° kerb chamfers, with sidewalks derived by
+  dilating the road surface;
+- dashed guide lines for straight-through and left-turn movements, and continued centre and
+  edge lines through bends;
+- signal heads 1.4 × 2.6 m plus a near-side kerb head per approach.
+
+Lanes, signals, crosswalks, traffic, events and dynamics are identical; a test asserts that
+the lane graph matches v1.
+
 ## 7. Model design (Phases 4–7)
 
 | Block | Design | Approx. size |
@@ -226,7 +240,7 @@ Known limitations:
 | A: trajectory head | MLP 320→256→20 (10×(x, y)); L1 loss on waypoints | ~0.1 M |
 | B: temporal | model A's encoder, frozen (features cached) → GRU(256) over H = 4 frames → head with [current speed, command]; ablations H ∈ {1, 2, 4, 8}, stride 2, speed history, end-to-end | 1.55 M (0.48 M trainable) |
 | C: introspection | MLP 284 → 128 → 64 → 1 on [detached GRU state, speed, command, predicted waypoints]; weighted BCE; Platt calibration on intro_cal; trained on recorded rollouts of frozen B (`src/driveaware/introspection/`) | 0.045 M |
-| Uncertainty | (i) heteroscedastic Laplace head (aleatoric); (ii) ensemble of M = 5 models (epistemic). MC dropout as a cheap comparison | ×M at inference |
+| Uncertainty | (i) Laplace head (aleatoric, NLL); (ii) ensemble of 5 probabilistic GRU heads on the shared frozen encoder (epistemic); (iii) MC dropout baseline (`models/uncertainty/`) | ×5 heads, about 2× head latency |
 | Ablation | ImageNet-pretrained ResNet-18 encoder | 11 M |
 
 Memory estimate (FP32, 96×160 input, B = 32 frames): activations ≪ 1 GiB, so batch 4 is a

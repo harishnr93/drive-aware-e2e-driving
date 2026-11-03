@@ -51,6 +51,13 @@ Format: decision, alternatives considered, rationale. Status values: **accepted*
 | D44 | Platt scaling (scale + intercept) for all predictors instead of temperature only | temperature scaling | Class-weighted training shifts the logit prior, which a temperature cannot undo | accepted (protocol deviation logged) |
 | D45 | Event detection requires an active alarm within the prediction horizon before the event; lead time counts from when that alarm segment was raised | fixed 5 s detection window | Keeps detection and false-alarm definitions consistent. A test caught the earlier inconsistency | accepted |
 | D46 | Anticipation analysis stratified by privileged lateral offset and time-to-failure (analysis only) | aggregate metrics only | Separates anticipating failures from recognising ongoing ones | accepted |
+| D47 | Aleatoric uncertainty: Laplace head trained with Laplace NLL | Gaussian NLL | Laplace matches the L1 objective used throughout. Accuracy is unchanged (val ADE 0.155–0.161) | accepted (Phase 7) |
+| D48 | Epistemic uncertainty: ensemble of 5 GRU heads on the shared frozen encoder | 5 full models (encoder included) | Hardware budget: about 1 min per member vs about 13 min. Cost: encoder uncertainty is not captured, which plausibly explains the under-reaction to image shift (documented) | accepted with limitation |
+| D49 | One σ-scale per method fitted on clean val at 1σ coverage | NLL-optimal scale; quantile intervals | Simple and transparent. Shown to fix central coverage but not tails (2σ coverage 0.82) | accepted; tail calibration open |
+| D50 | Failure-link analysis offline on recorded rollouts (histories rebuilt from recorded features) | new rollouts | Same states the policy visited; reconstruction verified to ≤ 0.6 mm | accepted |
+| D51 | Seeded image corruptions (noise, blur, occlusion) in `data/corruptions.py` | ad-hoc perturbations | Reused by the Phase 9 sensor-shift suite | accepted |
+| D52 | Benchmark v2 (pre-registered in `docs/benchmark_v2.md`): chamfered junctions, guide markings, larger and near-side signal heads; v1 kept bit-identical as the default preset | DAgger first; keep v1 only | 76–79% of v1 failures were at visually featureless junctions and about 40% of events were red-light runs with 3×5 px heads. Rendering realism addresses the cause without changing any method. Gate (expert ≥ 98%, zero infractions) passed: 99/100, 0 infractions | accepted (pre-Phase 8) |
+| D53 | Benchmark preset carried in configs (`benchmark: v1/v2`) and run-name suffix `_v2`; v1 regression test pins map rasters and a render to pre-change hashes | separate code branch | One codebase, both benchmarks reproducible side by side | accepted |
 
 ## Rejected or deferred ideas
 

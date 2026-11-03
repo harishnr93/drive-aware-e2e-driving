@@ -118,3 +118,18 @@ Observations:
 
 Every training/evaluation run will write `env.json` with: git commit and dirty flag,
 Python/torch/CUDA/cuDNN versions, GPU name, driver, and `pip freeze` hash.
+
+## 8. Long unattended runs under WSL2 (observed 2026-11-02/03)
+
+Multi-hour pipelines were killed three times, twice by WSL restarting the Linux VM shortly after
+the last attached session (terminal or Claude Code session) closed. There is no `.wslconfig`
+on this machine, so WSL's default idle shutdown applies, and detached processes
+(`setsid nohup`) do not keep the VM alive. Mitigations now in the code:
+- every pipeline stage is resumable;
+- episode and rollout files are written atomically;
+- the closed-loop evaluation resumes per agent;
+- a run counts as complete only if its JSON parses.
+
+To run unattended, keep a WSL terminal open for the duration, or raise the idle timeout in
+`C:\Users\<user>\.wslconfig` (e.g. `[wsl2]` `vmIdleTimeout=-1`, then `wsl --shutdown` once).
+That Windows-side setting has not been changed by this project.

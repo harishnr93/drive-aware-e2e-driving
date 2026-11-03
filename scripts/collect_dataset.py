@@ -40,7 +40,7 @@ from driveaware.data.validation import (
     validate_episode_arrays,
     validate_split,
 )
-from driveaware.sim.lightweight.scenario import ScenarioSpec
+from driveaware.sim.lightweight.scenario import BENCHMARKS, ScenarioSpec
 
 
 @dataclass
@@ -54,6 +54,7 @@ class SplitConfig:
 class DatasetConfig:
     name: str = "expert_v1"
     dataset_seed: int = 0
+    benchmark: str = "v1"  # map preset (scenario.BENCHMARKS)
     route_length: float = 300.0
     max_duration: float = 150.0
     workers: int = 4
@@ -95,7 +96,14 @@ def main() -> None:
     root = Path(args.root) / cfg.name
     root.mkdir(parents=True, exist_ok=True)
     log = setup_logging(root)
-    base = ScenarioSpec(0, 0, 0, route_length=cfg.route_length, max_duration=cfg.max_duration)
+    base = ScenarioSpec(
+        0,
+        0,
+        0,
+        route_length=cfg.route_length,
+        max_duration=cfg.max_duration,
+        map=BENCHMARKS[cfg.benchmark],
+    )
 
     report: dict = {"config": asdict(cfg), "environment": environment_info(REPO_ROOT), "splits": {}}
     for split, sc in cfg.splits.items():

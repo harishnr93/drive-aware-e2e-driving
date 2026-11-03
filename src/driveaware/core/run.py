@@ -28,3 +28,20 @@ def create_run_dir(name: str, cfg: Any, root: str | Path | None = None) -> Path:
     with open(run_dir / "env.json", "w") as fh:
         json.dump(environment_info(REPO_ROOT), fh, indent=2)
     return run_dir
+
+
+def atomic_savez(path: str | Path, **arrays: Any) -> Path:
+    """np.savez_compressed via a temporary file + rename: a killed process never leaves a
+    truncated file at ``path`` (resumable pipelines treat an existing file as complete)."""
+    import os
+
+    import numpy as np
+
+    path = Path(path)
+    tmp = path.with_name(path.name + ".tmp")
+    with open(tmp, "wb") as fh:
+        np.savez_compressed(fh, **arrays)
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(tmp, path)
+    return path

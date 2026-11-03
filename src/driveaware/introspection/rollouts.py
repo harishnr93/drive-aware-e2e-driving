@@ -19,6 +19,7 @@ from typing import Any
 
 import numpy as np
 
+from driveaware.core.run import atomic_savez
 from driveaware.core.types import EventType
 from driveaware.evaluation.closed_loop import AgentSpec, _make_agent
 from driveaware.sim.lightweight.agents import IDMParams, find_leader
@@ -131,7 +132,7 @@ def record_episode(scenario: ScenarioSpec, agent_spec: AgentSpec) -> dict[str, n
 def _job(args: tuple[ScenarioSpec, AgentSpec, str]) -> str:
     scenario, spec, path = args
     if not Path(path).exists():
-        np.savez_compressed(path, **record_episode(scenario, spec))
+        atomic_savez(path, **record_episode(scenario, spec))
     return path
 
 

@@ -119,6 +119,10 @@ files by a script, never typed by hand.
 
 | Date | Deviation | Reason |
 |---|---|---|
+| 2026-11-02 | **Benchmark v2 introduced before Phase 8** (pre-registered in `benchmark_v2.md`, decision D52). Phases 3–7 are re-run on v2 with the identical protocol. v1 results remain reported unchanged | Changing the environment after seeing v1 results is mitigated by pre-registering the change set and its gate before any v2 data, setting no target for learned models, and reporting both benchmarks |
+| 2026-11-02 | `scripts/env.sh` fixed: the ROS-path filter exited non-zero when every `LD_LIBRARY_PATH` entry was a ROS path, which silently aborted strict-mode (`set -euo pipefail`) scripts | Found when the v2 pipeline script failed before its first stage. Interactive use was unaffected |
+| 2026-11-02 | Phase 7: the ensemble spans the GRU and head only (shared frozen encoder), not full models | 4 GB GPU and time budget. The limitation is reported with the shift results |
+| 2026-11-02 | Phase 7: image-corruption experiments run early as a preview (one severity each) | Needed to evaluate uncertainty under unfamiliar inputs (Phase 7 task 4). Phase 9 runs the full severity suite |
 | 2026-11-02 | Phase 6: Platt scaling (scale + intercept) instead of temperature scaling, for every predictor | Weighted BCE shifts the prior. Applying the same post-hoc calibration to all predictors keeps the comparison fair |
 | 2026-11-02 | Phase 6: alarm threshold fixed on intro_cal at a 10% frame-level false-positive rate (§5 left the operating point open). Event-level detection uses the 2 s prediction horizon (D45) | Needed to report detection rate and lead time. Phase 8 will choose thresholds by intervention cost |
 | 2026-11-02 | Phase 6: ensemble-disagreement baseline (§6 item 2) deferred to Phase 7 | Requires the Phase 7 ensemble |

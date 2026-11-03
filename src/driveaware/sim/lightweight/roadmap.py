@@ -80,6 +80,12 @@ class MapConfig:
     resolution: float = 0.1  # m per raster pixel
     margin: float = 30.0  # m of grass around the network
     texture_noise: float = 6.0  # std of static colour noise (motion cue)
+    # --- benchmark v2 options (defaults reproduce v1 exactly; see docs/benchmark_v2.md) ---
+    junction_style: str = "disc"  # "disc" (v1) | "chamfer" (v2: road union + 45° kerb chamfers)
+    junction_chamfer: float = 6.0  # m, chamfer leg beyond the road edge (v2)
+    guide_markings: bool = False  # dashed guide lines through junctions and bends (v2)
+    signal_head_size: tuple[float, float, float] | None = None  # (w, d, h) m; None = camera default
+    near_side_heads: bool = False  # extra kerb-side head per approach, visible at the stop line
 
     @property
     def road_half_width(self) -> float:
@@ -126,6 +132,7 @@ class Signal:
     green: float
     yellow: float
     all_red: float
+    near_heads: list[SignalHead] = field(default_factory=list)  # v2: aligned with approaches
 
     @property
     def slot(self) -> float:
@@ -211,7 +218,7 @@ def generate_map(seed: int, config: MapConfig = MapConfig()) -> RoadMap:
     _connect_lanes(lanes, nodes, edges, config)
     signals = _signals(lanes, nodes, edges, config, rng)
     crosswalks = _crosswalks(roads, edges, config, rng)
-    semantic, origin = _rasterise(nodes, roads, lanes, signals, crosswalks, config)
+    semantic, origin = _rasterise(nodes, edges, roads, lanes, signals, crosswalks, config)
     color = _colorise(semantic, config, rng)
     for arr in (semantic, color, nodes):
         arr.setflags(write=False)
@@ -341,15 +348,24 @@ def _signals(lanes, nodes, edges, cfg: MapConfig, rng: np.random.Generator) -> d
             continue
         approaches = [ln for ln in lanes if ln.kind == "road" and ln.end_node == n]
         approaches.sort(key=lambda ln: ln.path.heading_at(ln.path.length))
-        heads = []
+        heads, near_heads = [], []
         for k, ln in enumerate(approaches):
             ln.signal = (n, k)
             end = ln.path.points[-1]
             yaw = ln.path.heading_at(ln.path.length)
+            fwd = np.array([math.cos(yaw), math.sin(yaw)])
+            right = np.array([math.sin(yaw), -math.cos(yaw)])
             # Head on the far side of the junction, over the approach lane's extension, so
             # it remains in view while waiting at the stop line.
-            ahead = end + 2.0 * cfg.intersection_trim * np.array([math.cos(yaw), math.sin(yaw)])
+            ahead = end + 2.0 * cfg.intersection_trim * fwd
             heads.append(SignalHead(np.array([*ahead, 5.2]), float(wrap_angle(yaw + math.pi))))
+            if cfg.near_side_heads:
+                # v2: kerb-side pole 8 m past the stop line, 1 m outside the road edge.
+                lateral = 0.5 * cfg.lane_width + cfg.shoulder + 1.0
+                pos = end + 8.0 * fwd + lateral * right
+                near_heads.append(
+                    SignalHead(np.array([*pos, 3.6]), float(wrap_angle(yaw + math.pi)))
+                )
         sig = Signal(
             n,
             [ln.id for ln in approaches],
@@ -358,6 +374,7 @@ def _signals(lanes, nodes, edges, cfg: MapConfig, rng: np.random.Generator) -> d
             cfg.signal_green,
             cfg.signal_yellow,
             cfg.signal_all_red,
+            near_heads,
         )
         sig.offset = float(rng.uniform(0.0, sig.cycle))
         signals[n] = sig
@@ -383,7 +400,7 @@ def _crosswalks(roads, edges, cfg: MapConfig, rng: np.random.Generator) -> list[
 _SHIFT = 4  # cv2 sub-pixel bits
 
 
-def _rasterise(nodes, roads, lanes, signals, crosswalks, cfg: MapConfig):
+def _rasterise(nodes, edges, roads, lanes, signals, crosswalks, cfg: MapConfig):
     all_pts = np.concatenate([r.points for r in roads])
     origin = all_pts.min(axis=0) - cfg.margin
     size = all_pts.max(axis=0) + cfg.margin - origin
@@ -408,18 +425,35 @@ def _rasterise(nodes, roads, lanes, signals, crosswalks, cfg: MapConfig):
         cv2.fillPoly(sem, [px(points)], int(value), cv2.LINE_8, _SHIFT)
 
     half = cfg.road_half_width
-    junction_r = 0.9 * cfg.intersection_trim
-    for road in roads:
-        line(road.points, 2 * (half + cfg.sidewalk), Sem.SIDEWALK)
-    for p in nodes:
-        disk(p, junction_r + cfg.sidewalk, Sem.SIDEWALK)
-    for road in roads:
-        line(road.points, 2 * half, Sem.ROAD)
-    for p in nodes:
-        disk(p, junction_r, Sem.ROAD)
-    for ln in lanes:
-        if ln.kind == "connector":
-            line(ln.path.points, cfg.lane_width, Sem.ROAD)
+    if cfg.junction_style == "disc":  # v1
+        junction_r = 0.9 * cfg.intersection_trim
+        for road in roads:
+            line(road.points, 2 * (half + cfg.sidewalk), Sem.SIDEWALK)
+        for p in nodes:
+            disk(p, junction_r + cfg.sidewalk, Sem.SIDEWALK)
+        for road in roads:
+            line(road.points, 2 * half, Sem.ROAD)
+        for p in nodes:
+            disk(p, junction_r, Sem.ROAD)
+        for ln in lanes:
+            if ln.kind == "connector":
+                line(ln.path.points, cfg.lane_width, Sem.ROAD)
+    elif cfg.junction_style == "chamfer":  # v2
+        for road in roads:
+            line(road.points, 2 * half, Sem.ROAD)
+        for n, p in enumerate(nodes):
+            for tri in _junction_chamfers(n, p, roads, edges, cfg):
+                poly(tri, Sem.ROAD)
+        for ln in lanes:
+            if ln.kind == "connector":
+                line(ln.path.points, cfg.lane_width, Sem.ROAD)
+        # Sidewalk = band of the given width around the whole road surface (follows kerbs).
+        k = 2 * int(round(cfg.sidewalk / res)) + 1
+        road_mask = (sem != Sem.GRASS).astype(np.uint8)
+        grown = cv2.dilate(road_mask, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k)))
+        sem[(grown > 0) & (road_mask == 0)] = Sem.SIDEWALK
+    else:
+        raise ValueError(f"unknown junction_style {cfg.junction_style!r}")
 
     trim = cfg.intersection_trim
     for road in roads:
@@ -430,6 +464,9 @@ def _rasterise(nodes, roads, lanes, signals, crosswalks, cfg: MapConfig):
         while s < core.length:  # 3 m dash, 3 m gap
             line(core.slice(s, min(s + 3.0, core.length), 0.25).points, 0.15, Sem.CENTER_LINE)
             s += 6.0
+
+    if cfg.guide_markings:
+        _guide_markings(lanes, nodes, line, cfg)
 
     for sig in signals.values():
         for lane_id in sig.approach_lanes:
@@ -450,6 +487,75 @@ def _rasterise(nodes, roads, lanes, signals, crosswalks, cfg: MapConfig):
             ]
             poly(np.array(pts), Sem.CROSSWALK)
     return sem, origin
+
+
+def _road_directions(node: int, node_xy: np.ndarray, roads, edges) -> list[np.ndarray]:
+    """Unit directions of the roads leaving ``node`` (tangent at the node)."""
+    dirs = []
+    for (u, v), road in zip(edges, roads, strict=True):
+        if node not in (u, v):
+            continue
+        pts = road.points if u == node else road.points[::-1]
+        d = pts[min(4, len(pts) - 1)] - pts[0]  # ~2 m along the road
+        dirs.append(d / np.linalg.norm(d))
+    return dirs
+
+
+def _junction_chamfers(node, centre, roads, edges, cfg: MapConfig) -> list[np.ndarray]:
+    """45-degree kerb chamfers between angularly adjacent roads at a node (v2)."""
+    dirs = _road_directions(node, centre, roads, edges)
+    if len(dirs) < 2:
+        return []
+    dirs.sort(key=lambda d: math.atan2(d[1], d[0]))
+    half = cfg.road_half_width
+    tris = []
+    for i in range(len(dirs)):
+        di, dj = dirs[i], dirs[(i + 1) % len(dirs)]
+        gap = (math.atan2(dj[1], dj[0]) - math.atan2(di[1], di[0])) % (2 * math.pi)
+        if gap >= math.radians(150):  # nearly straight-through side: no corner to cut
+            continue
+        ni = np.array([-di[1], di[0]])  # left of road i (towards road j)
+        nj = np.array([dj[1], -dj[0]])  # right of road j (towards road i)
+        # Kerb lines: centre + ni*half + a*di  and  centre + nj*half + b*dj; corner = intersection.
+        a, b = np.linalg.solve(np.column_stack([di, -dj]), (nj - ni) * half)
+        corner = centre + ni * half + a * di
+        pi = corner + cfg.junction_chamfer * di
+        pj = corner + cfg.junction_chamfer * dj
+        tris.append(np.array([corner, pi, pj, centre]))
+    return tris
+
+
+def _guide_markings(lanes, nodes, line, cfg: MapConfig) -> None:
+    """v2: dashed guide lines through junctions and continued markings through bends."""
+
+    def dashed(path, on, off, value):
+        s = 0.0
+        while s < path.length:
+            seg = path.slice(s, min(s + on, path.length), 0.25)
+            line(seg.points, 0.15, value)
+            s += on + off
+
+    road_edge = {ln.id: ln.edge for ln in lanes if ln.kind == "road"}
+    pred = {}
+    for ln in lanes:
+        for succ in ln.successors:
+            if lanes[succ].kind == "connector":
+                pred[succ] = ln.id
+    for ln in lanes:
+        if ln.kind != "connector":
+            continue
+        e_in = road_edge[pred[ln.id]]
+        e_out = road_edge[ln.successors[0]]
+        left = ln.path.offset(0.5 * cfg.lane_width)
+        if ln.turn == Command.LANE_FOLLOW:  # bend at a 2-road node: continue road markings
+            if e_in < e_out:  # the shared centre line once per bend
+                dashed(left, 3.0, 3.0, Sem.CENTER_LINE)
+            line(ln.path.offset(-0.5 * cfg.lane_width).points, 0.15, Sem.EDGE_LINE)
+        elif ln.turn == Command.STRAIGHT:
+            if e_in < e_out:  # opposite straight movements share this line: draw it once
+                dashed(left, 1.0, 1.5, Sem.EDGE_LINE)
+        elif ln.turn == Command.LEFT:
+            dashed(left, 1.0, 1.5, Sem.EDGE_LINE)
 
 
 def _colorise(sem: np.ndarray, cfg: MapConfig, rng: np.random.Generator) -> np.ndarray:

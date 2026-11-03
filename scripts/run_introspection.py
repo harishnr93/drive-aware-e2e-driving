@@ -55,10 +55,23 @@ class IntrospectionRunConfig:
     head: HeadConfig = field(default_factory=HeadConfig)
 
 
+EVAL_CONFIG = REPO_ROOT / "configs/evaluation/closed_loop.yaml"
+SUFFIX = ""  # run-name suffix of the policies under study ("" = v1, "_v2" = benchmark v2)
+
+
 def scenarios(name: str) -> list[ScenarioSpec]:
-    cfg = yaml.safe_load((REPO_ROOT / "configs/evaluation/closed_loop.yaml").read_text())
+    from driveaware.sim.lightweight.scenario import BENCHMARKS
+
+    cfg = yaml.safe_load(Path(EVAL_CONFIG).read_text())
     sc = cfg["sets"][name]
-    base = ScenarioSpec(0, 0, 0, route_length=cfg["route_length"], max_duration=cfg["max_duration"])
+    base = ScenarioSpec(
+        0,
+        0,
+        0,
+        route_length=cfg["route_length"],
+        max_duration=cfg["max_duration"],
+        map=BENCHMARKS[cfg.get("benchmark", "v1")],
+    )
     maps = list(range(sc["map_seed_start"], sc["map_seed_start"] + sc["num_maps"]))
     return scenario_set(name, maps, sc["routes_per_map"], base, cfg["seed"])
 
@@ -111,8 +124,8 @@ def paired_metric_difference(y_eps, pa_eps, pb_eps, fn, n=1000, seed=0) -> dict:
 
 def run_seed(seed: int, workers: int, out_dir: Path, log) -> dict:
     seed_everything(seed)
-    b_run = sorted(REPO_ROOT.glob(f"experiments/*_model_b_h4_seed{seed}"))[-1]
-    a_run = sorted(REPO_ROOT.glob(f"experiments/*_model_a_seed{seed}"))[-1]
+    b_run = sorted(REPO_ROOT.glob(f"experiments/*_model_b_h4{SUFFIX}_seed{seed}"))[-1]
+    a_run = sorted(REPO_ROOT.glob(f"experiments/*_model_a{SUFFIX}_seed{seed}"))[-1]
     agent = AgentSpec("policy", str(b_run / "best.pt"))
     eps: dict[str, list[dict]] = {}
     t0 = time.perf_counter()
@@ -126,7 +139,7 @@ def run_seed(seed: int, workers: int, out_dir: Path, log) -> dict:
     rollout_s = time.perf_counter() - t0
 
     # Determinism check: the test rollouts must reproduce the Phase 5 closed-loop episodes.
-    p5 = sorted(REPO_ROOT.glob("experiments/*_closed_loop_test_id"))
+    p5 = sorted(REPO_ROOT.glob("experiments/*_closed_loop_test_id*"))
     repro = None
     for rep in p5:
         f = rep / f"episodes_{b_run.name}.json"
@@ -324,11 +337,17 @@ def run_seed(seed: int, workers: int, out_dir: Path, log) -> dict:
 
 
 def main() -> None:
+    global EVAL_CONFIG, SUFFIX
     parser = argparse.ArgumentParser()
     parser.add_argument("--seeds", type=int, nargs="*", default=[0, 1, 2])
     parser.add_argument("--workers", type=int, default=6)
+    parser.add_argument("--eval-config", default=str(EVAL_CONFIG))
+    parser.add_argument("--suffix", default="", help='policy run-name suffix, e.g. "_v2"')
     args = parser.parse_args()
-    run_dir = create_run_dir("introspection", IntrospectionRunConfig(args.seeds, args.workers))
+    EVAL_CONFIG, SUFFIX = Path(args.eval_config), args.suffix
+    run_dir = create_run_dir(
+        f"introspection{SUFFIX}", IntrospectionRunConfig(args.seeds, args.workers)
+    )
     log = setup_logging(run_dir)
     all_res = {}
     for s in args.seeds:

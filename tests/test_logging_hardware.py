@@ -39,3 +39,12 @@ def test_snapshot_and_env_info_are_serialisable():
     info = environment_info()
     json.dumps(info)
     assert "python" in info and "torch" in info
+
+
+def test_atomic_savez_roundtrip_and_no_tmp_left(tmp_path):
+    from driveaware.core.run import atomic_savez
+
+    out = atomic_savez(tmp_path / "a.npz", x=np.arange(5))
+    with np.load(out) as z:
+        assert z["x"].tolist() == [0, 1, 2, 3, 4]
+    assert not list(tmp_path.glob("*.tmp"))

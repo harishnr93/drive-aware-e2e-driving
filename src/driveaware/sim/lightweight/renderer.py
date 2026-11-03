@@ -66,6 +66,7 @@ class SignalHeadView:
     z: float  # centre height
     facing_yaw: float
     state: SignalState
+    size: tuple[float, float, float] | None = None  # (w, d, h); None = CameraConfig default
 
 
 class CameraRenderer:
@@ -203,7 +204,7 @@ class CameraRenderer:
         return self._cuboid(corners, 0.0, box.height, ego_pose, lambda _f: base)
 
     def _signal_solid(self, head: SignalHeadView, ego_pose: Pose2D):
-        w, d, h = self.cfg.signal_head_size
+        w, d, h = head.size if head.size is not None else self.cfg.signal_head_size
         c, s = math.cos(head.facing_yaw), math.sin(head.facing_yaw)
         local = np.array([[d / 2, w / 2], [-d / 2, w / 2], [-d / 2, -w / 2], [d / 2, -w / 2]])
         corners = local @ np.array([[c, s], [-s, c]]) + np.array([head.x, head.y])

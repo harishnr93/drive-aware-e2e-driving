@@ -4,7 +4,8 @@ Uncertainty-Aware End-to-End Autonomous Driving with Self-Introspection and Risk
 
 A compact camera-based driving policy (a CNN, and a CNN + GRU variant) predicts future ego
 waypoints. An introspection head predicts the probability of a driving failure within the next
-2 s from the policy's own internal state, and a risk-adaptive planner will act on it (Phase 8). The study asks whether calibrated introspection
+2 s from the policy's own internal state. Trajectory uncertainty is estimated separately
+(ensembles, MC dropout), and a risk-adaptive planner will act on these signals (Phase 8). The study asks whether calibrated introspection
 improves closed-loop safety, and under which conditions. Hypotheses, baselines and the
 evaluation protocol were fixed before any results: see
 [docs/research_plan.md](docs/research_plan.md) and
@@ -37,7 +38,9 @@ results are below.</sub>
 | 4 | Model A: single-frame CNN behaviour cloning, open- and closed-loop evaluation | done |
 | 5 | Model B: temporal (GRU) policy with controls and ablations | done |
 | 6 | Failure prediction (introspection) with heuristic and privileged baselines | done |
-| 7–12 | Uncertainty, risk adaptation, robustness, CARLA, report | not started |
+| 7 | Trajectory uncertainty: MC dropout, Laplace head, deep ensemble | done |
+| v2 | Pre-registered benchmark redesign (realistic junctions and signals); Phases 3–7 re-run | done |
+| 8–12 | Risk adaptation, robustness, CARLA, report | not started |
 
 ## Simulator and data
 
@@ -71,6 +74,120 @@ the policy sees (160×96, upscaled). Right: the top-down debug view.</sub></td>
 All numbers are on held-out `test_id` maps. All agents drive the same scenarios, and learned
 models are reported as the mean ± sd over 3 training seeds. Full tables, paired statistics and
 diagnoses are in [docs/results.md](docs/results.md).
+
+### Benchmark v2: does a more realistic world fix the policy? No, but the findings replicate.
+
+The v1 policies failed mostly inside featureless junction discs, and signal heads were a few
+pixels wide. Before Phase 8, a **pre-registered** redesign
+([docs/benchmark_v2.md](docs/benchmark_v2.md)) changed only what the camera sees:
+- chamfered kerbs;
+- guide lines through junctions;
+- larger signal heads plus near-side heads.
+
+Expert trajectories and labels are identical; the whole Phase 3–7 pipeline was re-run with
+the same seeds.
+
+<p align="center">
+  <img src="docs/assets/benchmark_v1_v2.png" alt="Top: v1 junction disc and bend versus v2 chamfered junction with dashed guide lines and continued bend markings; right: policy camera in a left turn and at a red light, where v2 shows guide lines and a large near-side red signal" width="860">
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/benchmark_v1_v2_results_dark.png">
+    <img src="docs/assets/benchmark_v1_v2_results_light.png" alt="Four panels comparing v1 (grey) and v2 (blue) for Model A, Model B (H=1) and Model B: route completion 43/47/46 versus 41/41/39 percent; collision episodes 21/24/23 versus 18/19/19 percent; red-light violations 3.5/3.7/3.8 versus 3.2/3.5/3.6 per km; failures in junctions 77/76/79 versus 83/85/84 percent" width="900">
+  </picture>
+</p>
+
+| | v1 | v2 |
+|---|---|---|
+| Expert route completion | 99.99% | 99.99% |
+| Policy route completion (A / B(H=1) / B) | 0.43 / 0.47 / 0.46 | 0.41 / 0.41 / 0.39 |
+| Temporal effect, B − B(H=1) | −0.010 [−0.026, 0.006] | −0.024 [−0.042, −0.006] |
+| **Introspection AUROC / PR-AUC** | **0.971 / 0.796** | **0.973 / 0.815** |
+| Introspection − best heuristic (ΔAUROC) | +0.12 to +0.17 | +0.13 to +0.17 |
+| Uncertainty adds to introspection | ±0.004 | ≤ +0.003 |
+
+- **The redesign did not make behaviour cloning competent.** The policies still drift inside
+  junctions. The realistic kerbs now end the drift earlier: off-road rather than route
+  deviation, mostly on right turns. Completion even drops slightly. This is reported as the
+  pre-registered negative result it is.
+- **The research findings replicate on a world with different failure modes.** Introspection
+  predicts failures as well as on v1, including the anticipation stratum (PR-AUC 0.58).
+  Temporal context still does not help, and uncertainty still under-reacts to image shift and
+  adds nothing to failure prediction.
+
+### Phase 7: is trajectory uncertainty the same as failure risk? No.
+
+Three ways to attach uncertainty to model B's predicted trajectory:
+- **MC dropout.**
+- **A Laplace head** that predicts its own error scale (aleatoric).
+- **A 5-member ensemble of GRU heads** whose disagreement measures model uncertainty
+  (epistemic). The members share the frozen encoder.
+
+<p align="center">
+  <img src="docs/assets/uncertainty_collision.gif" alt="Same collision episode as the warning clip: five ensemble trajectories (teal) almost coincide and the 2-sigma ellipses stay small; below, the epistemic-std timeline stays flat while the failure-probability timeline rises to 0.94 before the collision" width="560">
+  <br>
+  <sub>The collision episode from Phase 6, now with the 5 ensemble trajectories (teal) and 2σ
+  ellipses (yellow). <b>Epistemic std</b> (top timeline, scaled to its own range; about 0.02–0.04 m)
+  stays flat while <b>P(failure)</b> (bottom) rises to 0.94. The policy is confidently
+  wrong, which introspection catches and trajectory uncertainty does not.</sub>
+</p>
+
+| Clean test_id (3 seeds) | ADE | ρ(σ, error) | AUROC for high error | 1σ coverage, raw → calibrated | Predicts failure (AUROC) |
+|---|---|---|---|---|---|
+| MC dropout | 0.167 | 0.46 | 0.61 | 0.55 → 0.66 | 0.63 |
+| Laplace head | 0.162 | 0.57 | 0.70 | 0.85 → 0.67 | 0.52 |
+| Ensemble (5 heads) | **0.160** | 0.57 | 0.69 | 0.33 → 0.68 | 0.66 |
+| Introspection (Phase 6), for comparison | — | — | — | — | **0.971** |
+
+<table>
+<tr>
+<td width="50%">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/uncertainty_corruptions_dark.png">
+    <img src="docs/assets/uncertainty_corruptions_light.png" alt="Grouped bars per condition: prediction error 0.16, 0.37, 0.21, 0.67 m for clean, noise, blur, occlusion, while calibrated ensemble and Laplace uncertainty stay between 0.09 and 0.16 m">
+  </picture>
+</td>
+<td>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/uncertainty_failure_link_dark.png">
+    <img src="docs/assets/uncertainty_failure_link_light.png" alt="Bars: AUROC 0.97 for introspection with or without uncertainty inputs versus 0.66, 0.52 and 0.63 for ensemble disagreement, Laplace scale and MC dropout; PR-AUC 0.80 versus 0.16, 0.08, 0.11">
+  </picture>
+</td>
+</tr>
+</table>
+
+- **Uncertainty ranks errors moderately well, but its raw scale is wrong.** The ensemble is
+  4× over-confident and the Laplace head 2× too wide. One scale fitted on val fixes 1σ coverage,
+  but 2σ coverage stays at 0.82 instead of 0.95 because errors are heavy-tailed.
+- **It under-reacts to unfamiliar input.** Image noise, blur and occlusion raise the error up
+  to 4.2×, but calibrated uncertainty only 1.0–1.8×, so 1σ coverage falls to 0.30 under
+  occlusion. A shared frozen encoder is the likely reason.
+- **It is not failure risk.** Alone it predicts failures poorly (best AUROC 0.74 for all
+  signals combined), and added to the introspection head it changes nothing (ΔAUROC within
+  ±0.004). Introspection captures what the policy is about to do; trajectory uncertainty
+  captures how precisely that can be predicted.
+
+<details>
+<summary>Uncertainty vs error and sparsification curves</summary>
+
+<table>
+<tr>
+<td width="50%">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/uncertainty_vs_error_dark.png">
+    <img src="docs/assets/uncertainty_vs_error_light.png" alt="Binned predicted uncertainty versus actual ADE: Laplace and ensemble+Laplace rise roughly monotonically; the raw ensemble std is an order of magnitude too small; MC dropout plateaus">
+  </picture>
+</td>
+<td>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/uncertainty_sparsification_dark.png">
+    <img src="docs/assets/uncertainty_sparsification_light.png" alt="Sparsification curves: removing the most uncertain predictions lowers the remaining error for all methods, MC dropout least, all far from the oracle">
+  </picture>
+</td>
+</tr>
+</table>
+</details>
 
 ### Phase 6: can the driving model predict its own failures? Yes, with caveats.
 
@@ -216,13 +333,12 @@ constant-velocity extrapolation. But it drives poorly: on the original 50-route 
   </picture>
 </p>
 
-### Open decisions (need sign-off; none applied)
+### Open decisions
 
-These options would change the benchmark or the training method, so they are not applied
-silently:
-1. **Junction appearance (simulator v2):** smaller corner fillets and guide markings through
-   junctions. This requires re-collecting the dataset; v1 results stay reported.
-2. **DAgger** with the expert as the labeller, for compounding errors.
+1. ~~**Junction appearance (simulator v2)**~~: done and pre-registered. It did not improve
+   driving (see above); both benchmarks stay reported.
+2. **DAgger** with the expert as the labeller. This is the pre-registered fallback and targets
+   the compounding error that v2 did not fix.
 3. **Route target-point conditioning** in addition to discrete commands (TransFuser-style).
 
 ## Installation (Ubuntu 22.04 / WSL2, Python 3.10)
@@ -268,6 +384,19 @@ python scripts/eval_closed_loop.py --set-name test_id --expert --workers 6 \
 python scripts/summarize_phase5.py --report experiments/<ts>_closed_loop_test_id/report.json
 python scripts/run_introspection.py --seeds 0 1 2         # rollouts + introspection, ~75 min
 python scripts/analyze_introspection.py --run-dir experiments/<ts>_introspection
+for k in 0 1 2; do for m in 0 1 2 3 4; do                 # 15 probabilistic heads, ~1 min each
+  python scripts/train_bc.py --config configs/training/model_b_prob.yaml --set seed=$((10*k+m)) \
+    encoder_checkpoint=$(ls -d experiments/*_model_a_seed$k)/best.pt name=model_bprob_e${m}_k${k}
+done; done
+python scripts/run_uncertainty.py --seeds 0 1 2           # ~25 min
+
+# Benchmark v2: the whole pipeline (resumable; keep a WSL terminal open, see docs/environment.md)
+bash scripts/run_v2_pipeline.sh                           # ~4 h
+python scripts/summarize_introspection.py --run-dir experiments/<ts>_introspection_v2 \
+    --out docs/results/phase6_introspection_v2.json
+python scripts/summarize_uncertainty.py --run-dir experiments/<ts>_uncertainty_v2 \
+    --out docs/results/phase7_uncertainty_v2.json
+python scripts/compare_benchmarks.py && python scripts/make_figures.py benchmark
 
 python scripts/make_figures.py sim                        # README figures
 python scripts/make_figures.py charts --report experiments/<ts>_closed_loop_test_id/report.json
@@ -275,6 +404,9 @@ python scripts/make_figures.py phase5 --summary docs/results/phase5_temporal.jso
 python scripts/make_figures.py phase6 --run-dir experiments/<ts>_introspection
 python scripts/make_figures.py warning --run-dir experiments/<ts>_introspection --outcome COLLISION \
     --name warning_collision.gif --stride 2
+python scripts/make_figures.py phase7 --run-dir experiments/<ts>_uncertainty
+python scripts/make_figures.py uncertainty --run-dir experiments/<ts>_uncertainty \
+    --intro-run experiments/<ts>_introspection --name uncertainty_collision.gif --stride 2
 python scripts/make_figures.py rollout --checkpoint experiments/<ts>_model_a_seed0/best.pt
 ```
 
@@ -294,7 +426,8 @@ src/driveaware/
   control/          pure pursuit + PID waypoint controller (shared by expert and policies)
   expert/           privileged drivers: route follower, rule-based expert
   data/             collection, labels, storage (memmaps), validation, PyTorch Dataset
-  models/           encoders/ (compact CNN), trajectory/ (model A), temporal/ (model B)
+  models/           encoders/ (compact CNN), trajectory/ (model A), temporal/ (model B),
+                    uncertainty/ (ensemble, MC dropout)
   training/         behaviour-cloning trainer; cached-feature trainer for temporal models
   agents/           closed-loop policy agent (observations only, no privileged state)
   evaluation/       open-loop metrics, closed-loop evaluation, paired statistics
@@ -311,6 +444,7 @@ Conventions: SI units, radians; ego frame at the rear axle with x forward, y lef
 | Document | Content |
 |---|---|
 | [research_plan.md](docs/research_plan.md) | Questions, hypotheses, model ladder, scope of claims |
+| [benchmark_v2.md](docs/benchmark_v2.md) | Pre-registration of the realistic-junction benchmark |
 | [experiment_protocol.md](docs/experiment_protocol.md) | Splits, metrics, statistics, deviation log |
 | [system_architecture.md](docs/system_architecture.md) | Interfaces, frames, timing, simulator as built |
 | [dataset.md](docs/dataset.md) | Expert, collection, labels, validation, expert reference |

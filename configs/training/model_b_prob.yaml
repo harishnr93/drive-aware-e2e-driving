@@ -1,0 +1,17 @@
+# Phase 7: probabilistic model B (Laplace head) for deep ensembles. Pass per member:
+#   --set seed=<10k+m> encoder_checkpoint=experiments/<ts>_model_a_seed<k>/best.pt name=model_bprob_e<m>_k<k>
+name: model_bprob
+model: temporal
+data_root: data/expert_v1
+seed: 0
+history: 4
+history_stride: 1
+epochs: 30
+batch_size: 256
+lr: 1.0e-3
+weight_decay: 1.0e-4
+stationary_weight: 0.3
+temporal:
+  speed_history: false
+  freeze_encoder: true
+  probabilistic: true

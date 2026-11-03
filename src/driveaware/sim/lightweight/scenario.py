@@ -24,6 +24,19 @@ class TrafficConfig:
     ego_clear_radius: float = 25.0  # m kept free of NPCs around the ego start
 
 
+# Benchmark presets. v1 = original stylised junctions; v2 = pre-registered realism changes
+# (docs/benchmark_v2.md). Only map/rendering options differ.
+BENCHMARKS: dict[str, MapConfig] = {
+    "v1": MapConfig(),
+    "v2": MapConfig(
+        junction_style="chamfer",
+        guide_markings=True,
+        signal_head_size=(1.4, 0.8, 2.6),
+        near_side_heads=True,
+    ),
+}
+
+
 @dataclass(frozen=True)
 class ScenarioSpec:
     map_seed: int

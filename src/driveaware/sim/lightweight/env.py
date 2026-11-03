@@ -396,20 +396,24 @@ class LightweightDrivingSim:
 
     def signal_heads(self) -> list[SignalHeadView]:
         st, ep = self.state, self.episode
+        size = ep.road_map.config.signal_head_size
         out = []
         for sig in ep.road_map.signals.values():
-            for k, head in enumerate(sig.heads):
-                if math.hypot(head.position[0] - st.ego.x, head.position[1] - st.ego.y) > 90.0:
-                    continue
-                out.append(
-                    SignalHeadView(
-                        float(head.position[0]),
-                        float(head.position[1]),
-                        float(head.position[2]),
-                        head.facing_yaw,
-                        sig.state(st.t, k),
+            for heads in (sig.heads, sig.near_heads):
+                for k, head in enumerate(heads):
+                    dx, dy = head.position[0] - st.ego.x, head.position[1] - st.ego.y
+                    if math.hypot(dx, dy) > 90.0:
+                        continue
+                    out.append(
+                        SignalHeadView(
+                            float(head.position[0]),
+                            float(head.position[1]),
+                            float(head.position[2]),
+                            head.facing_yaw,
+                            sig.state(st.t, k),
+                            size,
+                        )
                     )
-                )
         return out
 
     def _result(self, events: list[Event]) -> StepResult:

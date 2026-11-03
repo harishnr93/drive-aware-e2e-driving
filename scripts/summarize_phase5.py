@@ -48,12 +48,18 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--report", required=True)
     parser.add_argument("--out", default=str(REPO_ROOT / "docs/results/phase5_temporal.json"))
+    parser.add_argument("--suffix", default="", help='run-name suffix, e.g. "_v2"')
+    parser.add_argument("--data-root", default=str(REPO_ROOT / "data/expert_v1"))
     parser.add_argument(
         "--ablation-report",
         default=None,
         help="closed-loop report of single-seed ablations on the same scenarios",
     )
     args = parser.parse_args()
+    global GROUPS, ABLATIONS
+    GROUPS = {k: v.replace("_seed", f"{args.suffix}_seed") for k, v in GROUPS.items()}
+    # Only ablation runs of the same benchmark (none were re-run on v2).
+    ABLATIONS = tuple(a.replace("_seed0", f"{args.suffix}_seed0") for a in ABLATIONS)
     report_path = Path(args.report)
     report = json.loads(report_path.read_text())
     episodes = {
@@ -71,7 +77,7 @@ def main() -> None:
         "training": {},
     }
     out["closed_loop"]["Expert"] = report["agents"]["expert"]["closed_loop"]
-    test_dir = REPO_ROOT / "data/expert_v1/test_id"
+    test_dir = Path(args.data_root) / "test_id"
     out["open_loop_test"]["reference"] = reference_baselines(test_dir)
     members: dict[str, list[str]] = {}
     for group, key in GROUPS.items():

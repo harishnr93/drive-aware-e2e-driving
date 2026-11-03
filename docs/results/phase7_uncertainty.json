@@ -1,0 +1,1075 @@
+{
+ "source_run": "20261102-183652_uncertainty",
+ "methods": [
+  "MC dropout",
+  "Laplace head",
+  "Ensemble",
+  "Ensemble + Laplace"
+ ],
+ "notes": {
+  "uncertainty_summary": "mean over waypoints of sqrt(var_x + var_y), metres",
+  "sigma_scale": "fitted on clean val so that 68.3% of coordinates satisfy |e| <= s*sigma",
+  "high_error": "ADE above the 90th percentile of the ensemble mean's clean val ADE"
+ },
+ "seeds": {
+  "0": {
+   "seed": 0,
+   "encoder_run": "20261102-105211_model_a_seed0",
+   "policy_run": "20261102-123628_model_b_h4_seed0",
+   "member_val_ade": [
+    0.1554717719554901,
+    0.15606409311294556,
+    0.15735012292861938,
+    0.15730857849121094,
+    0.15526773035526276
+   ],
+   "open_loop": {
+    "clean": {
+     "MC dropout": {
+      "ade": 0.1630856990814209,
+      "fde": 0.40674811601638794,
+      "mean_uncertainty_m": 0.134053036570549,
+      "spearman_u_ade": 0.4574581018272909,
+      "auroc_high_error": 0.6241631525709085,
+      "high_error_rate": 0.10591118632199335,
+      "ause": 0.40185810159000784,
+      "nll_raw": 3.200286388397217,
+      "nll_scaled": -0.06220247969031334,
+      "coverage_1sigma_raw": 0.5233413082803291,
+      "coverage_2sigma_raw": 0.7086100250919064,
+      "coverage_1sigma_scaled": 0.6596953959269417,
+      "coverage_2sigma_scaled": 0.8261626889187139,
+      "sigma_scale": 1.6427370309829712
+     },
+     "Laplace head": {
+      "ade": 0.16022562980651855,
+      "fde": 0.4048268795013428,
+      "mean_uncertainty_m": 0.23941034078598022,
+      "spearman_u_ade": 0.5412590650174578,
+      "auroc_high_error": 0.6921178548664153,
+      "high_error_rate": 0.10573612650989088,
+      "ause": 0.3131978826916386,
+      "nll_raw": -0.9943152070045471,
+      "nll_scaled": 2.0493273735046387,
+      "coverage_1sigma_raw": 0.8554122658575013,
+      "coverage_2sigma_raw": 0.9474908093598646,
+      "coverage_1sigma_scaled": 0.6822372643986695,
+      "coverage_2sigma_scaled": 0.8343671587792496,
+      "sigma_scale": 0.4451371431350708
+     },
+     "Ensemble": {
+      "ade": 0.15828238427639008,
+      "fde": 0.40470436215400696,
+      "mean_uncertainty_m": 0.022277485579252243,
+      "spearman_u_ade": 0.5657923213392639,
+      "auroc_high_error": 0.7106140605805413,
+      "high_error_rate": 0.10585283305129252,
+      "ause": 0.30060861191280147,
+      "nll_raw": 187.56649780273438,
+      "nll_scaled": 21.89512825012207,
+      "coverage_1sigma_raw": 0.3386823831475754,
+      "coverage_2sigma_raw": 0.5058090680982669,
+      "coverage_1sigma_scaled": 0.6805304312306705,
+      "coverage_2sigma_scaled": 0.8315924607574254,
+      "sigma_scale": 4.0915350914001465
+     },
+     "Ensemble + Laplace": {
+      "ade": 0.15828238427639008,
+      "fde": 0.40470436215400696,
+      "mean_uncertainty_m": 0.23726299405097961,
+      "spearman_u_ade": 0.5217302397656765,
+      "auroc_high_error": 0.6845968088412394,
+      "high_error_rate": 0.10585283305129252,
+      "ause": 0.3311006183319284,
+      "nll_raw": -1.0825523138046265,
+      "nll_scaled": 2.062441110610962,
+      "coverage_1sigma_raw": 0.8561475170683317,
+      "coverage_2sigma_raw": 0.9462274610491918,
+      "coverage_1sigma_scaled": 0.6838478146700122,
+      "coverage_2sigma_scaled": 0.8254974616327245,
+      "sigma_scale": 0.42167508602142334
+     },
+     "Model B (deterministic)": {
+      "ade": 0.15864598751068115
+     }
+    },
+    "noise": {
+     "MC dropout": {
+      "ade": 0.3192563056945801,
+      "fde": 0.8032160997390747,
+      "mean_uncertainty_m": 0.1301719844341278,
+      "spearman_u_ade": 0.6208880288334981,
+      "auroc_high_error": 0.756263950455029,
+      "high_error_rate": 0.30676314407422534,
+      "ause": 0.2432395935096364,
+      "nll_raw": 9.0083646774292,
+      "nll_scaled": 2.1580276489257812,
+      "coverage_1sigma_raw": 0.3371564451187489,
+      "coverage_2sigma_raw": 0.5420843788294334,
+      "coverage_1sigma_scaled": 0.4808863861819455,
+      "coverage_2sigma_scaled": 0.7034195016630682,
+      "sigma_scale": 1.6427370309829712
+     },
+     "Laplace head": {
+      "ade": 0.31908345222473145,
+      "fde": 0.807573139667511,
+      "mean_uncertainty_m": 0.25191086530685425,
+      "spearman_u_ade": 0.7317882446647571,
+      "auroc_high_error": 0.8081389198527708,
+      "high_error_rate": 0.31143140573029116,
+      "ause": 0.1634716559228776,
+      "nll_raw": 2.0561671257019043,
+      "nll_scaled": 17.509010314941406,
+      "coverage_1sigma_raw": 0.7012545953200677,
+      "coverage_2sigma_raw": 0.8548316508140281,
+      "coverage_1sigma_scaled": 0.5033465600746921,
+      "coverage_2sigma_scaled": 0.6723055377253895,
+      "sigma_scale": 0.4451371431350708
+     },
+     "Ensemble": {
+      "ade": 0.3170718550682068,
+      "fde": 0.801106870174408,
+      "mean_uncertainty_m": 0.029970631003379822,
+      "spearman_u_ade": 0.7188665088214236,
+      "auroc_high_error": 0.806722297440885,
+      "high_error_rate": 0.3117231720837953,
+      "ause": 0.17525028027829131,
+      "nll_raw": 303.873291015625,
+      "nll_scaled": 23.5799503326416,
+      "coverage_1sigma_raw": 0.28306004551555114,
+      "coverage_2sigma_raw": 0.41607340841454166,
+      "coverage_1sigma_scaled": 0.5763348310672813,
+      "coverage_2sigma_scaled": 0.7358464141915154,
+      "sigma_scale": 4.0915350914001465
+     },
+     "Ensemble + Laplace": {
+      "ade": 0.3170718550682068,
+      "fde": 0.801106870174408,
+      "mean_uncertainty_m": 0.24459388852119446,
+      "spearman_u_ade": 0.7394743695202464,
+      "auroc_high_error": 0.8114171270117597,
+      "high_error_rate": 0.3117231720837953,
+      "ause": 0.1593778882359762,
+      "nll_raw": 1.6899586915969849,
+      "nll_scaled": 17.746042251586914,
+      "coverage_1sigma_raw": 0.7083736943455681,
+      "coverage_2sigma_raw": 0.8569673805216782,
+      "coverage_1sigma_scaled": 0.5038396452121141,
+      "coverage_2sigma_scaled": 0.6665023049541927,
+      "sigma_scale": 0.42167508602142334
+     }
+    },
+    "blur": {
+     "MC dropout": {
+      "ade": 0.20373250544071198,
+      "fde": 0.513414740562439,
+      "mean_uncertainty_m": 0.13566246628761292,
+      "spearman_u_ade": 0.2798767431403789,
+      "auroc_high_error": 0.6434688303567404,
+      "high_error_rate": 0.1446577580673397,
+      "ause": 0.39914020426564517,
+      "nll_raw": 4.125511169433594,
+      "nll_scaled": 0.30105581879615784,
+      "coverage_1sigma_raw": 0.4450487249810352,
+      "coverage_2sigma_raw": 0.640001167065414,
+      "coverage_1sigma_scaled": 0.5817879442142732,
+      "coverage_2sigma_scaled": 0.7862519694228861,
+      "sigma_scale": 1.6427370309829712
+     },
+     "Laplace head": {
+      "ade": 0.19624458253383636,
+      "fde": 0.4991518259048462,
+      "mean_uncertainty_m": 0.26182013750076294,
+      "spearman_u_ade": 0.45097584513206546,
+      "auroc_high_error": 0.6880662332087906,
+      "high_error_rate": 0.14226527396860594,
+      "ause": 0.3330311910564542,
+      "nll_raw": -0.9893394112586975,
+      "nll_scaled": 1.6774524450302124,
+      "coverage_1sigma_raw": 0.8177948299002159,
+      "coverage_2sigma_raw": 0.9338536499970823,
+      "coverage_1sigma_scaled": 0.632132228511408,
+      "coverage_2sigma_scaled": 0.7937124350819863,
+      "sigma_scale": 0.4451371431350708
+     },
+     "Ensemble": {
+      "ade": 0.19308264553546906,
+      "fde": 0.49495476484298706,
+      "mean_uncertainty_m": 0.023863989859819412,
+      "spearman_u_ade": 0.41077420633118816,
+      "auroc_high_error": 0.6840485049879839,
+      "high_error_rate": 0.13963937678706892,
+      "ause": 0.3285408074565584,
+      "nll_raw": 98.8783950805664,
+      "nll_scaled": 6.898359775543213,
+      "coverage_1sigma_raw": 0.28130361206745635,
+      "coverage_2sigma_raw": 0.4314670012254187,
+      "coverage_1sigma_scaled": 0.6106290482581549,
+      "coverage_2sigma_scaled": 0.7826719962653906,
+      "sigma_scale": 4.0915350914001465
+     },
+     "Ensemble + Laplace": {
+      "ade": 0.19308264553546906,
+      "fde": 0.49495476484298706,
+      "mean_uncertainty_m": 0.25819918513298035,
+      "spearman_u_ade": 0.4357789334912241,
+      "auroc_high_error": 0.6698216209377187,
+      "high_error_rate": 0.13963937678706892,
+      "ause": 0.35681987303693585,
+      "nll_raw": -1.0418869256973267,
+      "nll_scaled": 1.8679322004318237,
+      "coverage_1sigma_raw": 0.8169457898115189,
+      "coverage_2sigma_raw": 0.9319630040263757,
+      "coverage_1sigma_scaled": 0.6265507381688744,
+      "coverage_2sigma_scaled": 0.7822810293516952,
+      "sigma_scale": 0.42167508602142334
+     }
+    },
+    "occlusion": {
+     "MC dropout": {
+      "ade": 0.687154233455658,
+      "fde": 1.7502521276474,
+      "mean_uncertainty_m": 0.1253368854522705,
+      "spearman_u_ade": 0.33726156419347925,
+      "auroc_high_error": 0.6682332519826191,
+      "high_error_rate": 0.7043823306296317,
+      "ause": 0.2531654539044249,
+      "nll_raw": 31.71647834777832,
+      "nll_scaled": 10.59570598602295,
+      "coverage_1sigma_raw": 0.17182704090564277,
+      "coverage_2sigma_raw": 0.31304195600163387,
+      "coverage_1sigma_scaled": 0.26614635000291764,
+      "coverage_2sigma_scaled": 0.4629340024508374,
+      "sigma_scale": 1.6427370309829712
+     },
+     "Laplace head": {
+      "ade": 0.6590819954872131,
+      "fde": 1.6760046482086182,
+      "mean_uncertainty_m": 0.2969338595867157,
+      "spearman_u_ade": 0.3436566588006713,
+      "auroc_high_error": 0.6608108161091606,
+      "high_error_rate": 0.6906693120149384,
+      "ause": 0.270435884199156,
+      "nll_raw": 1.767600655555725,
+      "nll_scaled": 14.563435554504395,
+      "coverage_1sigma_raw": 0.48533874073641825,
+      "coverage_2sigma_raw": 0.6903775456614343,
+      "coverage_1sigma_scaled": 0.3020948824181595,
+      "coverage_2sigma_scaled": 0.4543327303495361,
+      "sigma_scale": 0.4451371431350708
+     },
+     "Ensemble": {
+      "ade": 0.6615929007530212,
+      "fde": 1.6817651987075806,
+      "mean_uncertainty_m": 0.04235748201608658,
+      "spearman_u_ade": 0.4025096034939896,
+      "auroc_high_error": 0.6929818280692368,
+      "high_error_rate": 0.6940538017155862,
+      "ause": 0.257801272111601,
+      "nll_raw": 168.0016326904297,
+      "nll_scaled": 8.28179931640625,
+      "coverage_1sigma_raw": 0.1321409815020132,
+      "coverage_2sigma_raw": 0.23959269417050827,
+      "coverage_1sigma_scaled": 0.39861410982085543,
+      "coverage_2sigma_scaled": 0.5886794654840404,
+      "sigma_scale": 4.0915350914001465
+     },
+     "Ensemble + Laplace": {
+      "ade": 0.6615929007530212,
+      "fde": 1.6817651987075806,
+      "mean_uncertainty_m": 0.29043278098106384,
+      "spearman_u_ade": 0.36850557028591535,
+      "auroc_high_error": 0.6690809426300816,
+      "high_error_rate": 0.6940538017155862,
+      "ause": 0.25640802476576846,
+      "nll_raw": 1.7050188779830933,
+      "nll_scaled": 16.08469581604004,
+      "coverage_1sigma_raw": 0.4865320651222501,
+      "coverage_2sigma_raw": 0.6932718678881952,
+      "coverage_1sigma_scaled": 0.29204353153994284,
+      "coverage_2sigma_scaled": 0.4413783042539534,
+      "sigma_scale": 0.42167508602142334
+     }
+    }
+   },
+   "failure": {
+    "Ensemble disagreement (epistemic)": {
+     "auroc": 0.6281490138007171,
+     "pr_auc": 0.13191544938099234,
+     "brier": 0.08192209233791854,
+     "ece": 0.03301173710519958
+    },
+    "Laplace scale (aleatoric)": {
+     "auroc": 0.5097573460676741,
+     "pr_auc": 0.08863914160933019,
+     "brier": 0.08239679364214421,
+     "ece": 0.03282417988305233
+    },
+    "MC dropout variance": {
+     "auroc": 0.6056097594038125,
+     "pr_auc": 0.1031382247823923,
+     "brier": 0.08170519939869408,
+     "ece": 0.04057202905524143
+    },
+    "All uncertainty signals": {
+     "auroc": 0.7018258079698436,
+     "pr_auc": 0.19548267686455495,
+     "brier": 0.07836354280726308,
+     "ece": 0.013051217571956231
+    },
+    "Introspection (C)": {
+     "auroc": 0.9704489841952184,
+     "pr_auc": 0.7971792383337664,
+     "brier": 0.03373029025349924,
+     "ece": 0.005869162859176511
+    },
+    "Introspection + uncertainty": {
+     "auroc": 0.9669410443908967,
+     "pr_auc": 0.795211223764485,
+     "brier": 0.035009492502551795,
+     "ece": 0.012054044258846394
+    }
+   },
+   "sigma_scales_val": {
+    "MC dropout": 1.6427370309829712,
+    "Laplace head": 0.4451371431350708,
+    "Ensemble": 4.0915350914001465,
+    "Ensemble + Laplace": 0.42167508602142334
+   },
+   "high_error_threshold_m": 0.384813517332077,
+   "rollout_reconstruction_max_waypoint_diff_m": 0.0004787445068359375,
+   "uncertainty_adds_to_introspection": {
+    "auroc": {
+     "mean": -0.003507939804321736,
+     "ci95": [
+      -0.0071238088612432995,
+      0.0005394083483666848
+     ]
+    },
+    "pr_auc": {
+     "mean": -0.0019680145692813067,
+     "ci95": [
+      -0.026947449937365052,
+      0.028166069781028764
+     ]
+    }
+   },
+   "latency_ms": {
+    "cuda: deterministic (B)": 3.0557370009773877,
+    "cuda: Laplace head": 3.1450224996660836,
+    "cuda: Ensemble (5 heads)": 6.9929384990246035,
+    "cuda: MC dropout (20 passes)": 21.628764499837416,
+    "cpu: deterministic (B)": 6.086202498408966,
+    "cpu: Laplace head": 5.963211999187479,
+    "cpu: Ensemble (5 heads)": 8.802682999885292,
+    "cpu: MC dropout (20 passes)": 19.26636599819176
+   }
+  },
+  "1": {
+   "seed": 1,
+   "encoder_run": "20261102-110508_model_a_seed1",
+   "policy_run": "20261102-123828_model_b_h4_seed1",
+   "member_val_ade": [
+    0.1594260036945343,
+    0.1601085215806961,
+    0.15940694510936737,
+    0.15908417105674744,
+    0.16048263013362885
+   ],
+   "open_loop": {
+    "clean": {
+     "MC dropout": {
+      "ade": 0.16902002692222595,
+      "fde": 0.42584753036499023,
+      "mean_uncertainty_m": 0.13859744369983673,
+      "spearman_u_ade": 0.4697590011454648,
+      "auroc_high_error": 0.6133627554788366,
+      "high_error_rate": 0.10521094707358347,
+      "ause": 0.37295134686891585,
+      "nll_raw": 2.9169909954071045,
+      "nll_scaled": 0.23270964622497559,
+      "coverage_1sigma_raw": 0.5486403687926709,
+      "coverage_2sigma_raw": 0.7247651280854291,
+      "coverage_1sigma_scaled": 0.656237964637918,
+      "coverage_2sigma_scaled": 0.8028768162455505,
+      "sigma_scale": 1.4920692443847656
+     },
+     "Laplace head": {
+      "ade": 0.163133442401886,
+      "fde": 0.4164928197860718,
+      "mean_uncertainty_m": 0.2249235212802887,
+      "spearman_u_ade": 0.5901056584882549,
+      "auroc_high_error": 0.7219501323254869,
+      "high_error_rate": 0.10316858259905468,
+      "ause": 0.2761964913861875,
+      "nll_raw": -1.253597617149353,
+      "nll_scaled": 1.0076098442077637,
+      "coverage_1sigma_raw": 0.8397502480014005,
+      "coverage_2sigma_raw": 0.9414804224776798,
+      "coverage_1sigma_scaled": 0.6670537433623155,
+      "coverage_2sigma_scaled": 0.8158370776682033,
+      "sigma_scale": 0.44217848777770996
+     },
+     "Ensemble": {
+      "ade": 0.16154274344444275,
+      "fde": 0.41276225447654724,
+      "mean_uncertainty_m": 0.022031065076589584,
+      "spearman_u_ade": 0.5201717362753417,
+      "auroc_high_error": 0.6351642246072624,
+      "high_error_rate": 0.10054268541751765,
+      "ause": 0.3420268258251498,
+      "nll_raw": 473.7201232910156,
+      "nll_scaled": 34.05308151245117,
+      "coverage_1sigma_raw": 0.3466388516076326,
+      "coverage_2sigma_raw": 0.4979255412265858,
+      "coverage_1sigma_scaled": 0.6772188831183988,
+      "coverage_2sigma_scaled": 0.8284968197467468,
+      "sigma_scale": 4.181451320648193
+     },
+     "Ensemble + Laplace": {
+      "ade": 0.16154274344444275,
+      "fde": 0.41276225447654724,
+      "mean_uncertainty_m": 0.2282237708568573,
+      "spearman_u_ade": 0.585699060532878,
+      "auroc_high_error": 0.710211322838845,
+      "high_error_rate": 0.10054268541751765,
+      "ause": 0.2831476366176518,
+      "nll_raw": -1.3102681636810303,
+      "nll_scaled": 0.9568940997123718,
+      "coverage_1sigma_raw": 0.848436132345218,
+      "coverage_2sigma_raw": 0.9456876932952092,
+      "coverage_1sigma_scaled": 0.6669428721479839,
+      "coverage_2sigma_scaled": 0.8149121783275952,
+      "sigma_scale": 0.41862037777900696
+     },
+     "Model B (deterministic)": {
+      "ade": 0.16445392370224
+     }
+    },
+    "noise": {
+     "MC dropout": {
+      "ade": 0.34846624732017517,
+      "fde": 0.8741479516029358,
+      "mean_uncertainty_m": 0.12896530330181122,
+      "spearman_u_ade": 0.699453234841863,
+      "auroc_high_error": 0.8254530441853598,
+      "high_error_rate": 0.36184863161580205,
+      "ause": 0.18189708753726275,
+      "nll_raw": 10.594858169555664,
+      "nll_scaled": 3.73469614982605,
+      "coverage_1sigma_raw": 0.3379325436190698,
+      "coverage_2sigma_raw": 0.5440596370426563,
+      "coverage_1sigma_scaled": 0.45636634183345975,
+      "coverage_2sigma_scaled": 0.6617056661025851,
+      "sigma_scale": 1.4920692443847656
+     },
+     "Laplace head": {
+      "ade": 0.3419854938983917,
+      "fde": 0.8579422831535339,
+      "mean_uncertainty_m": 0.24124880135059357,
+      "spearman_u_ade": 0.7789935509604757,
+      "auroc_high_error": 0.8516902808116749,
+      "high_error_rate": 0.35058645037054326,
+      "ause": 0.13056911257946147,
+      "nll_raw": 0.9469468593597412,
+      "nll_scaled": 12.195513725280762,
+      "coverage_1sigma_raw": 0.6755733208846356,
+      "coverage_2sigma_raw": 0.8416438116356422,
+      "coverage_1sigma_scaled": 0.48502655073816886,
+      "coverage_2sigma_scaled": 0.6441238256404271,
+      "sigma_scale": 0.44217848777770996
+     },
+     "Ensemble": {
+      "ade": 0.34206458926200867,
+      "fde": 0.8540711402893066,
+      "mean_uncertainty_m": 0.023864788934588432,
+      "spearman_u_ade": 0.7118294557654453,
+      "auroc_high_error": 0.8114183197963801,
+      "high_error_rate": 0.3533290540934819,
+      "ause": 0.17510423528523528,
+      "nll_raw": 396.91265869140625,
+      "nll_scaled": 22.705184936523438,
+      "coverage_1sigma_raw": 0.26716461457664703,
+      "coverage_2sigma_raw": 0.3751356713543794,
+      "coverage_1sigma_scaled": 0.5216373927758651,
+      "coverage_2sigma_scaled": 0.673968605940363,
+      "sigma_scale": 4.181451320648193
+     },
+     "Ensemble + Laplace": {
+      "ade": 0.34206458926200867,
+      "fde": 0.8540711402893066,
+      "mean_uncertainty_m": 0.2446191906929016,
+      "spearman_u_ade": 0.783904987952109,
+      "auroc_high_error": 0.8542722063929709,
+      "high_error_rate": 0.3533290540934819,
+      "ause": 0.1289216256387868,
+      "nll_raw": 0.501329779624939,
+      "nll_scaled": 11.176962852478027,
+      "coverage_1sigma_raw": 0.6845509715819572,
+      "coverage_2sigma_raw": 0.8526200618544669,
+      "coverage_1sigma_scaled": 0.4802765945031219,
+      "coverage_2sigma_scaled": 0.6385481706249635,
+      "sigma_scale": 0.41862037777900696
+     }
+    },
+    "blur": {
+     "MC dropout": {
+      "ade": 0.18273122608661652,
+      "fde": 0.4609200358390808,
+      "mean_uncertainty_m": 0.14033231139183044,
+      "spearman_u_ade": 0.43336527088973015,
+      "auroc_high_error": 0.5994469716948991,
+      "high_error_rate": 0.12429246659275252,
+      "ause": 0.379492296074536,
+      "nll_raw": 3.462463855743408,
+      "nll_scaled": 0.4741174876689911,
+      "coverage_1sigma_raw": 0.5074692186497053,
+      "coverage_2sigma_raw": 0.6875474120324444,
+      "coverage_1sigma_scaled": 0.6133424753457432,
+      "coverage_2sigma_scaled": 0.7808776331913404,
+      "sigma_scale": 1.4920692443847656
+     },
+     "Laplace head": {
+      "ade": 0.17547757923603058,
+      "fde": 0.4476277828216553,
+      "mean_uncertainty_m": 0.23072437942028046,
+      "spearman_u_ade": 0.5547647112333384,
+      "auroc_high_error": 0.7027504114769485,
+      "high_error_rate": 0.11787360681566202,
+      "ause": 0.29645585205512215,
+      "nll_raw": -1.0689893960952759,
+      "nll_scaled": 1.7915409803390503,
+      "coverage_1sigma_raw": 0.8129952733850733,
+      "coverage_2sigma_raw": 0.9288965396510475,
+      "coverage_1sigma_scaled": 0.6357734726031394,
+      "coverage_2sigma_scaled": 0.7876232712843555,
+      "sigma_scale": 0.44217848777770996
+     },
+     "Ensemble": {
+      "ade": 0.1733625829219818,
+      "fde": 0.44267362356185913,
+      "mean_uncertainty_m": 0.0226468313485384,
+      "spearman_u_ade": 0.5177169788272206,
+      "auroc_high_error": 0.6567467872812123,
+      "high_error_rate": 0.11635642177744063,
+      "ause": 0.32570061770281655,
+      "nll_raw": 250.72108459472656,
+      "nll_scaled": 13.181539535522461,
+      "coverage_1sigma_raw": 0.3055727373519286,
+      "coverage_2sigma_raw": 0.46225126918363774,
+      "coverage_1sigma_scaled": 0.6474908093598646,
+      "coverage_2sigma_scaled": 0.8104073058294917,
+      "sigma_scale": 4.181451320648193
+     },
+     "Ensemble + Laplace": {
+      "ade": 0.1733625829219818,
+      "fde": 0.44267362356185913,
+      "mean_uncertainty_m": 0.23366311192512512,
+      "spearman_u_ade": 0.558470401362787,
+      "auroc_high_error": 0.694773417525243,
+      "high_error_rate": 0.11635642177744063,
+      "ause": 0.2973602341558903,
+      "nll_raw": -1.1539850234985352,
+      "nll_scaled": 1.6611775159835815,
+      "coverage_1sigma_raw": 0.823901499679057,
+      "coverage_2sigma_raw": 0.9346589251327537,
+      "coverage_1sigma_scaled": 0.6374919764252787,
+      "coverage_2sigma_scaled": 0.7883935344576064,
+      "sigma_scale": 0.41862037777900696
+     }
+    },
+    "occlusion": {
+     "MC dropout": {
+      "ade": 0.6875638365745544,
+      "fde": 1.7362436056137085,
+      "mean_uncertainty_m": 0.12711288034915924,
+      "spearman_u_ade": 0.5019720120354385,
+      "auroc_high_error": 0.7364796387968513,
+      "high_error_rate": 0.6679698897123184,
+      "ause": 0.19144169804118588,
+      "nll_raw": 21.91383171081543,
+      "nll_scaled": 8.783677101135254,
+      "coverage_1sigma_raw": 0.18860652389566435,
+      "coverage_2sigma_raw": 0.3366604423177919,
+      "coverage_1sigma_scaled": 0.26508140281262765,
+      "coverage_2sigma_scaled": 0.4567806500554356,
+      "sigma_scale": 1.4920692443847656
+     },
+     "Laplace head": {
+      "ade": 0.6597259640693665,
+      "fde": 1.6635828018188477,
+      "mean_uncertainty_m": 0.28675106167793274,
+      "spearman_u_ade": 0.5372265341569238,
+      "auroc_high_error": 0.7608625768616607,
+      "high_error_rate": 0.6428196300402638,
+      "ause": 0.17798727705952996,
+      "nll_raw": 2.074573040008545,
+      "nll_scaled": 16.859766006469727,
+      "coverage_1sigma_raw": 0.4734959444476863,
+      "coverage_2sigma_raw": 0.6655861586041898,
+      "coverage_1sigma_scaled": 0.30736710042597887,
+      "coverage_2sigma_scaled": 0.4440742253603314,
+      "sigma_scale": 0.44217848777770996
+     },
+     "Ensemble": {
+      "ade": 0.6572517156600952,
+      "fde": 1.6483317613601685,
+      "mean_uncertainty_m": 0.037293367087841034,
+      "spearman_u_ade": 0.44408045849195493,
+      "auroc_high_error": 0.7146212226509749,
+      "high_error_rate": 0.6365174768045749,
+      "ause": 0.25619088722344147,
+      "nll_raw": 215.50408935546875,
+      "nll_scaled": 10.307149887084961,
+      "coverage_1sigma_raw": 0.13519285755966623,
+      "coverage_2sigma_raw": 0.2292262356305071,
+      "coverage_1sigma_scaled": 0.3810351870222326,
+      "coverage_2sigma_scaled": 0.5660354787885861,
+      "sigma_scale": 4.181451320648193
+     },
+     "Ensemble + Laplace": {
+      "ade": 0.6572517156600952,
+      "fde": 1.6483317613601685,
+      "mean_uncertainty_m": 0.29850274324417114,
+      "spearman_u_ade": 0.5527273691160467,
+      "auroc_high_error": 0.7667175644893649,
+      "high_error_rate": 0.6365174768045749,
+      "ause": 0.17424632257317615,
+      "nll_raw": 0.9944785833358765,
+      "nll_scaled": 12.521352767944336,
+      "coverage_1sigma_raw": 0.4964258621695746,
+      "coverage_2sigma_raw": 0.7027309330687985,
+      "coverage_1sigma_scaled": 0.3102468343350645,
+      "coverage_2sigma_scaled": 0.45140923148742484,
+      "sigma_scale": 0.41862037777900696
+     }
+    }
+   },
+   "failure": {
+    "Ensemble disagreement (epistemic)": {
+     "auroc": 0.6788991427620152,
+     "pr_auc": 0.20862067896255582,
+     "brier": 0.07257161616041906,
+     "ece": 0.01912244725332523
+    },
+    "Laplace scale (aleatoric)": {
+     "auroc": 0.5209054755929823,
+     "pr_auc": 0.07954113542680954,
+     "brier": 0.07729816572154335,
+     "ece": 0.04522502548774622
+    },
+    "MC dropout variance": {
+     "auroc": 0.6426602144312841,
+     "pr_auc": 0.10802118445862607,
+     "brier": 0.07892038896663052,
+     "ece": 0.03328854455899954
+    },
+    "All uncertainty signals": {
+     "auroc": 0.7734846868064827,
+     "pr_auc": 0.2780313107785339,
+     "brier": 0.0687210659175861,
+     "ece": 0.015094949087174056
+    },
+    "Introspection (C)": {
+     "auroc": 0.9741197667298341,
+     "pr_auc": 0.8080809518225063,
+     "brier": 0.031572507359703246,
+     "ece": 0.014296673558839006
+    },
+    "Introspection + uncertainty": {
+     "auroc": 0.9713584405295009,
+     "pr_auc": 0.7969066209203614,
+     "brier": 0.03269602319569031,
+     "ece": 0.013068898076933923
+    }
+   },
+   "sigma_scales_val": {
+    "MC dropout": 1.4920692443847656,
+    "Laplace head": 0.44217848777770996,
+    "Ensemble": 4.181451320648193,
+    "Ensemble + Laplace": 0.41862037777900696
+   },
+   "high_error_threshold_m": 0.40456637740135193,
+   "rollout_reconstruction_max_waypoint_diff_m": 0.00063323974609375,
+   "uncertainty_adds_to_introspection": {
+    "auroc": {
+     "mean": -0.002761326200333203,
+     "ci95": [
+      -0.004415510408924894,
+      -0.0011862795680828658
+     ]
+    },
+    "pr_auc": {
+     "mean": -0.011174330902144924,
+     "ci95": [
+      -0.028527309855546325,
+      0.009257465196532005
+     ]
+    }
+   },
+   "latency_ms": {
+    "cuda: deterministic (B)": 6.949395001356606,
+    "cuda: Laplace head": 3.47757049894426,
+    "cuda: Ensemble (5 heads)": 7.093946000168216,
+    "cuda: MC dropout (20 passes)": 23.57868050057732,
+    "cpu: deterministic (B)": 6.162719500935054,
+    "cpu: Laplace head": 6.112448500061873,
+    "cpu: Ensemble (5 heads)": 9.348950999992667,
+    "cpu: MC dropout (20 passes)": 28.885358999104938
+   }
+  },
+  "2": {
+   "seed": 2,
+   "encoder_run": "20261102-111841_model_a_seed2",
+   "policy_run": "20261102-124118_model_b_h4_seed2",
+   "member_val_ade": [
+    0.15796495974063873,
+    0.1579800844192505,
+    0.1583288609981537,
+    0.15686500072479248,
+    0.1584436446428299
+   ],
+   "open_loop": {
+    "clean": {
+     "MC dropout": {
+      "ade": 0.1695587933063507,
+      "fde": 0.4265354871749878,
+      "mean_uncertainty_m": 0.1425304412841797,
+      "spearman_u_ade": 0.4556754440863911,
+      "auroc_high_error": 0.605219530677993,
+      "high_error_rate": 0.1139639376787069,
+      "ause": 0.3804529306024269,
+      "nll_raw": 3.165900945663452,
+      "nll_scaled": 1.2156352996826172,
+      "coverage_1sigma_raw": 0.5853649997082336,
+      "coverage_2sigma_raw": 0.7731429071599463,
+      "coverage_1sigma_scaled": 0.6589893213514617,
+      "coverage_2sigma_scaled": 0.8224981035187022,
+      "sigma_scale": 1.2695121765136719
+     },
+     "Laplace head": {
+      "ade": 0.16285844147205353,
+      "fde": 0.4136195480823517,
+      "mean_uncertainty_m": 0.22642438113689423,
+      "spearman_u_ade": 0.5804300597706836,
+      "auroc_high_error": 0.6916463450770538,
+      "high_error_rate": 0.10386882184746456,
+      "ause": 0.28336329606246746,
+      "nll_raw": -1.1715008020401,
+      "nll_scaled": 1.4709380865097046,
+      "coverage_1sigma_raw": 0.8471202660909144,
+      "coverage_2sigma_raw": 0.942621228919881,
+      "coverage_1sigma_scaled": 0.6649997082336465,
+      "coverage_2sigma_scaled": 0.8189648129777674,
+      "sigma_scale": 0.4310281276702881
+     },
+     "Ensemble": {
+      "ade": 0.16038194298744202,
+      "fde": 0.41046077013015747,
+      "mean_uncertainty_m": 0.022084912285208702,
+      "spearman_u_ade": 0.621173803240001,
+      "auroc_high_error": 0.7324134420006442,
+      "high_error_rate": 0.1057944797805917,
+      "ause": 0.2588927110441972,
+      "nll_raw": 251.39111328125,
+      "nll_scaled": 18.94117546081543,
+      "coverage_1sigma_raw": 0.3172813211180487,
+      "coverage_2sigma_raw": 0.5123679757250393,
+      "coverage_1sigma_scaled": 0.6785259963820972,
+      "coverage_2sigma_scaled": 0.8290307521736593,
+      "sigma_scale": 3.9351611137390137
+     },
+     "Ensemble + Laplace": {
+      "ade": 0.16038194298744202,
+      "fde": 0.41046077013015747,
+      "mean_uncertainty_m": 0.22911325097084045,
+      "spearman_u_ade": 0.5878205054258299,
+      "auroc_high_error": 0.7052576464563264,
+      "high_error_rate": 0.1057944797805917,
+      "ause": 0.28339663724010733,
+      "nll_raw": -1.1507415771484375,
+      "nll_scaled": 1.8406556844711304,
+      "coverage_1sigma_raw": 0.8520219408297836,
+      "coverage_2sigma_raw": 0.9462157903950517,
+      "coverage_1sigma_scaled": 0.6749897881776273,
+      "coverage_2sigma_scaled": 0.8198284413841396,
+      "sigma_scale": 0.41879844665527344
+     },
+     "Model B (deterministic)": {
+      "ade": 0.1651105284690857
+     }
+    },
+    "noise": {
+     "MC dropout": {
+      "ade": 0.479068785905838,
+      "fde": 1.1630512475967407,
+      "mean_uncertainty_m": 0.12947458028793335,
+      "spearman_u_ade": 0.6660588989437961,
+      "auroc_high_error": 0.8523955400970734,
+      "high_error_rate": 0.4890004084728949,
+      "ause": 0.16858060736256766,
+      "nll_raw": 25.099573135375977,
+      "nll_scaled": 15.17413330078125,
+      "coverage_1sigma_raw": 0.22179202894322228,
+      "coverage_2sigma_raw": 0.39657758067339677,
+      "coverage_1sigma_scaled": 0.27318667211297193,
+      "coverage_2sigma_scaled": 0.4749518585516718,
+      "sigma_scale": 1.2695121765136719
+     },
+     "Laplace head": {
+      "ade": 0.46714043617248535,
+      "fde": 1.1484934091567993,
+      "mean_uncertainty_m": 0.24488605558872223,
+      "spearman_u_ade": 0.7540304612001624,
+      "auroc_high_error": 0.8660283901510037,
+      "high_error_rate": 0.48199801598879616,
+      "ause": 0.11314295566249079,
+      "nll_raw": 3.9240219593048096,
+      "nll_scaled": 29.010433197021484,
+      "coverage_1sigma_raw": 0.5115685359164381,
+      "coverage_2sigma_raw": 0.7182353970940071,
+      "coverage_1sigma_scaled": 0.35135087821672406,
+      "coverage_2sigma_scaled": 0.47640193732858727,
+      "sigma_scale": 0.4310281276702881
+     },
+     "Ensemble": {
+      "ade": 0.4627741277217865,
+      "fde": 1.1424434185028076,
+      "mean_uncertainty_m": 0.027594540268182755,
+      "spearman_u_ade": 0.679656439134079,
+      "auroc_high_error": 0.8301023323800722,
+      "high_error_rate": 0.4736534982785785,
+      "ause": 0.15662978074460432,
+      "nll_raw": 258.5634460449219,
+      "nll_scaled": 14.685625076293945,
+      "coverage_1sigma_raw": 0.18963354145999883,
+      "coverage_2sigma_raw": 0.29644336815078487,
+      "coverage_1sigma_scaled": 0.4133483106728132,
+      "coverage_2sigma_scaled": 0.582202252436249,
+      "sigma_scale": 3.9351611137390137
+     },
+     "Ensemble + Laplace": {
+      "ade": 0.4627741277217865,
+      "fde": 1.1424434185028076,
+      "mean_uncertainty_m": 0.2425338625907898,
+      "spearman_u_ade": 0.7430384725504814,
+      "auroc_high_error": 0.8624985009971954,
+      "high_error_rate": 0.4736534982785785,
+      "ause": 0.12135941496357869,
+      "nll_raw": 3.4738259315490723,
+      "nll_scaled": 28.26953125,
+      "coverage_1sigma_raw": 0.5178619361615219,
+      "coverage_2sigma_raw": 0.7338040497169867,
+      "coverage_1sigma_scaled": 0.34944272626480716,
+      "coverage_2sigma_scaled": 0.47424870163972693,
+      "sigma_scale": 0.41879844665527344
+     }
+    },
+    "blur": {
+     "MC dropout": {
+      "ade": 0.2794114351272583,
+      "fde": 0.7219743728637695,
+      "mean_uncertainty_m": 0.14700864255428314,
+      "spearman_u_ade": 0.057187693576252197,
+      "auroc_high_error": 0.47631694089445376,
+      "high_error_rate": 0.25850498920464493,
+      "ause": 0.5521209242242332,
+      "nll_raw": 9.232142448425293,
+      "nll_scaled": 4.9949164390563965,
+      "coverage_1sigma_raw": 0.42669370368209136,
+      "coverage_2sigma_raw": 0.6054181011845714,
+      "coverage_1sigma_scaled": 0.4865320651222501,
+      "coverage_2sigma_scaled": 0.669501663068215,
+      "sigma_scale": 1.2695121765136719
+     },
+     "Laplace head": {
+      "ade": 0.2560075521469116,
+      "fde": 0.6615017652511597,
+      "mean_uncertainty_m": 0.25069087743759155,
+      "spearman_u_ade": 0.2659701818420907,
+      "auroc_high_error": 0.5741981177567236,
+      "high_error_rate": 0.2318375444943689,
+      "ause": 0.4058796547535619,
+      "nll_raw": -0.8823932409286499,
+      "nll_scaled": 2.3981213569641113,
+      "coverage_1sigma_raw": 0.746026142265274,
+      "coverage_2sigma_raw": 0.8921398144365992,
+      "coverage_1sigma_scaled": 0.5439283421835794,
+      "coverage_2sigma_scaled": 0.7118573846064072,
+      "sigma_scale": 0.4310281276702881
+     },
+     "Ensemble": {
+      "ade": 0.25698816776275635,
+      "fde": 0.6643833518028259,
+      "mean_uncertainty_m": 0.026190880686044693,
+      "spearman_u_ade": 0.41232615225247604,
+      "auroc_high_error": 0.6956039057215296,
+      "high_error_rate": 0.2323043706599755,
+      "ause": 0.32209733058511325,
+      "nll_raw": 82.03764343261719,
+      "nll_scaled": 2.9954535961151123,
+      "coverage_1sigma_raw": 0.23338390616794072,
+      "coverage_2sigma_raw": 0.3905846997724222,
+      "coverage_1sigma_scaled": 0.5647808834685184,
+      "coverage_2sigma_scaled": 0.7416525646262473,
+      "sigma_scale": 3.9351611137390137
+     },
+     "Ensemble + Laplace": {
+      "ade": 0.25698816776275635,
+      "fde": 0.6643833518028259,
+      "mean_uncertainty_m": 0.2531885802745819,
+      "spearman_u_ade": 0.2766190705500085,
+      "auroc_high_error": 0.5834385476803812,
+      "high_error_rate": 0.2323043706599755,
+      "ause": 0.40872441899784506,
+      "nll_raw": -0.890512228012085,
+      "nll_scaled": 2.647555112838745,
+      "coverage_1sigma_raw": 0.7465629923557215,
+      "coverage_2sigma_raw": 0.8930880550854875,
+      "coverage_1sigma_scaled": 0.5389128785668437,
+      "coverage_2sigma_scaled": 0.7048900040847289,
+      "sigma_scale": 0.41879844665527344
+     }
+    },
+    "occlusion": {
+     "MC dropout": {
+      "ade": 0.7435999512672424,
+      "fde": 1.8670257329940796,
+      "mean_uncertainty_m": 0.1293577253818512,
+      "spearman_u_ade": 0.41742781181578237,
+      "auroc_high_error": 0.7158014270844274,
+      "high_error_rate": 0.706949874540468,
+      "ause": 0.22808923441215984,
+      "nll_raw": 45.93077087402344,
+      "nll_scaled": 27.88495635986328,
+      "coverage_1sigma_raw": 0.16751181653731692,
+      "coverage_2sigma_raw": 0.3017476804574896,
+      "coverage_1sigma_scaled": 0.2065676606173776,
+      "coverage_2sigma_scaled": 0.3641623387990897,
+      "sigma_scale": 1.2695121765136719
+     },
+     "Laplace head": {
+      "ade": 0.7025187015533447,
+      "fde": 1.7659096717834473,
+      "mean_uncertainty_m": 0.3166601061820984,
+      "spearman_u_ade": 0.44169644170891553,
+      "auroc_high_error": 0.7087934927971806,
+      "high_error_rate": 0.7043239773589309,
+      "ause": 0.2311262883274874,
+      "nll_raw": 2.1990840435028076,
+      "nll_scaled": 17.69674301147461,
+      "coverage_1sigma_raw": 0.4775544144249285,
+      "coverage_2sigma_raw": 0.6867479722238431,
+      "coverage_1sigma_scaled": 0.3007002392484099,
+      "coverage_2sigma_scaled": 0.4402987687459882,
+      "sigma_scale": 0.4310281276702881
+     },
+     "Ensemble": {
+      "ade": 0.7021403908729553,
+      "fde": 1.7727566957473755,
+      "mean_uncertainty_m": 0.04165932908654213,
+      "spearman_u_ade": 0.39956561439309457,
+      "auroc_high_error": 0.6860347983442991,
+      "high_error_rate": 0.697088171792029,
+      "ause": 0.26689721683587125,
+      "nll_raw": 274.85711669921875,
+      "nll_scaled": 21.190553665161133,
+      "coverage_1sigma_raw": 0.12435081986345335,
+      "coverage_2sigma_raw": 0.22544786135262881,
+      "coverage_1sigma_scaled": 0.35928692303203597,
+      "coverage_2sigma_scaled": 0.539505164264457,
+      "sigma_scale": 3.9351611137390137
+     },
+     "Ensemble + Laplace": {
+      "ade": 0.7021403908729553,
+      "fde": 1.7727566957473755,
+      "mean_uncertainty_m": 0.31033605337142944,
+      "spearman_u_ade": 0.4296758731974007,
+      "auroc_high_error": 0.7091036115354129,
+      "high_error_rate": 0.697088171792029,
+      "ause": 0.23698065917727693,
+      "nll_raw": 1.9975008964538574,
+      "nll_scaled": 17.772388458251953,
+      "coverage_1sigma_raw": 0.4741932660325611,
+      "coverage_2sigma_raw": 0.688860360623213,
+      "coverage_1sigma_scaled": 0.28956351753515785,
+      "coverage_2sigma_scaled": 0.42914454105152594,
+      "sigma_scale": 0.41879844665527344
+     }
+    }
+   },
+   "failure": {
+    "Ensemble disagreement (epistemic)": {
+     "auroc": 0.678766906825436,
+     "pr_auc": 0.13867069167560273,
+     "brier": 0.07732578743856887,
+     "ece": 0.025913585043969203
+    },
+    "Laplace scale (aleatoric)": {
+     "auroc": 0.532352801443512,
+     "pr_auc": 0.08474734449361918,
+     "brier": 0.07861815233924317,
+     "ece": 0.03355446019790689
+    },
+    "MC dropout variance": {
+     "auroc": 0.6428668633153214,
+     "pr_auc": 0.11003347857857129,
+     "brier": 0.0780659747130102,
+     "ece": 0.03536562999028886
+    },
+    "All uncertainty signals": {
+     "auroc": 0.7484434576464227,
+     "pr_auc": 0.17588558676674956,
+     "brier": 0.07587816998826435,
+     "ece": 0.028886418911526865
+    },
+    "Introspection (C)": {
+     "auroc": 0.9691068829162014,
+     "pr_auc": 0.78376325468876,
+     "brier": 0.0347300597766933,
+     "ece": 0.013111700103978902
+    },
+    "Introspection + uncertainty": {
+     "auroc": 0.9726681244687874,
+     "pr_auc": 0.7973051495461364,
+     "brier": 0.03293009243515748,
+     "ece": 0.008129428363319239
+    }
+   },
+   "sigma_scales_val": {
+    "MC dropout": 1.2695121765136719,
+    "Laplace head": 0.4310281276702881,
+    "Ensemble": 3.9351611137390137,
+    "Ensemble + Laplace": 0.41879844665527344
+   },
+   "high_error_threshold_m": 0.3878304362297058,
+   "rollout_reconstruction_max_waypoint_diff_m": 0.0005183219909667969,
+   "uncertainty_adds_to_introspection": {
+    "auroc": {
+     "mean": 0.0035612415525859697,
+     "ci95": [
+      0.00017426829774036537,
+      0.006752419903878877
+     ]
+    },
+    "pr_auc": {
+     "mean": 0.013541894857376446,
+     "ci95": [
+      -0.006590279659001497,
+      0.03273727252131848
+     ]
+    }
+   },
+   "latency_ms": {
+    "cuda: deterministic (B)": 3.512552000756841,
+    "cuda: Laplace head": 3.288761001385865,
+    "cuda: Ensemble (5 heads)": 6.7946405015391065,
+    "cuda: MC dropout (20 passes)": 23.945805998664582,
+    "cpu: deterministic (B)": 6.107365001298604,
+    "cpu: Laplace head": 6.129226499979268,
+    "cpu: Ensemble (5 heads)": 9.182674999465235,
+    "cpu: MC dropout (20 passes)": 21.623629500027164
+   }
+  }
+ }
+}

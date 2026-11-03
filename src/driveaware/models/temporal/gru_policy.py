@@ -33,6 +33,8 @@ class TemporalConfig:
     speed_history: bool = False  # feed each frame's speed to the GRU (copycat-risk ablation)
     dropout: float = 0.1
     freeze_encoder: bool = True
+    probabilistic: bool = False  # also predict a Laplace scale per waypoint coordinate
+    min_scale: float = 0.01  # m, lower bound on the Laplace scale b
 
 
 class TemporalPolicy(nn.Module):
@@ -53,7 +55,9 @@ class TemporalPolicy(nn.Module):
             nn.Linear(config.gru_hidden + config.measurement_dim, config.hidden_dim),
             nn.ReLU(inplace=True),
             nn.Dropout(config.dropout),
-            nn.Linear(config.hidden_dim, config.num_waypoints * 2),
+            nn.Linear(
+                config.hidden_dim, config.num_waypoints * 2 * (2 if config.probabilistic else 1)
+            ),
         )
 
     def encode_frames(self, images: torch.Tensor) -> torch.Tensor:
@@ -78,7 +82,24 @@ class TemporalPolicy(nn.Module):
             dim=1,
         )
         z = torch.cat([h[-1], self.measure(meas)], dim=1)
-        return self.head(z).view(-1, self.cfg.num_waypoints, 2)
+        out = self.head(z)
+        n = self.cfg.num_waypoints
+        if self.cfg.probabilistic:
+            # Mean is returned by forward(); the scale is kept as a read-only side output.
+            self.last_scale = self.cfg.min_scale + nn.functional.softplus(out[:, 2 * n :]).view(
+                -1, n, 2
+            )
+            return out[:, : 2 * n].view(-1, n, 2)
+        return out.view(-1, n, 2)
+
+    def forward_dist(
+        self, feats: torch.Tensor, speed: torch.Tensor, command: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """(mean, Laplace scale b), both [B, N, 2]. Requires ``probabilistic=True``."""
+        if not self.cfg.probabilistic:
+            raise ValueError("model was not trained with a probabilistic head")
+        mean = self.forward_features(feats, speed, command)
+        return mean, self.last_scale
 
     def forward(self, image: torch.Tensor, speed: torch.Tensor, command: torch.Tensor):
         """image uint8 [B, T, H, W, 3]; speed [B, T]; command [B]."""

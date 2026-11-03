@@ -18,6 +18,7 @@ from typing import Any
 
 import numpy as np
 
+from driveaware.core.run import atomic_savez
 from driveaware.core.seeding import derive_seed, make_rng
 from driveaware.core.types import ControlCommand, EventType
 from driveaware.expert.expert import RuleBasedExpert
@@ -158,9 +159,9 @@ def save_episode(data: EpisodeData, directory: str | Path) -> Path:
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     stem = f"{data.meta['split']}_{data.meta['episode_id']:05d}"
-    np.savez_compressed(directory / f"{stem}.npz", **data.arrays)
+    # Metadata first, arrays last and atomically: an existing .npz always means "complete".
     (directory / f"{stem}.json").write_text(json.dumps(data.meta, indent=1))
-    return directory / f"{stem}.npz"
+    return atomic_savez(directory / f"{stem}.npz", **data.arrays)
 
 
 def load_episode(path: str | Path) -> EpisodeData:
